@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-
+//
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_wasa_eet23_MainActivity_stringFromJNI(
         JNIEnv* env,
