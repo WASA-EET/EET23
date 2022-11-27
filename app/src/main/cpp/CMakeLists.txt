@@ -14,14 +14,18 @@ project("eet23")
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
+include_directories( C:/Lib_Android/${ANDROID_ABI} )
+link_directories( C:/Lib_Android/${ANDROID_ABI} )
+
 add_library( # Sets the name of the library.
-        eet23
+        native-lib
 
         # Sets the library as a shared library.
         SHARED
 
         # Provides a relative path to your source file(s).
-        native-lib.cpp)
+        native-lib.cpp
+        json.hpp )
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -41,8 +45,26 @@ find_library( # Sets the name of the path variable.
 # build script, prebuilt third-party libraries, or system libraries.
 
 target_link_libraries( # Specifies the target library.
-        eet23
+        native-lib
 
         # Links the target library to the log library
         # included in the NDK.
-        ${log-lib})
+        ${log-lib}
+        android
+        GLESv1_CM
+        EGL
+        GLESv2
+        OpenSLES
+        m
+        DxLib
+        DxUseCLib
+        jpeg
+        png
+        zlib
+        tiff
+        theora_static
+        vorbis_static
+        vorbisfile_static
+        ogg_static
+        bullet
+        opus )
