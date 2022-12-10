@@ -17,10 +17,11 @@ int android_main() {
     SetDrawScreen(DX_SCREEN_BACK);
 
     // ここで画像のロード、初期設定を行う
+    int map = LoadGraph("biwako.png");
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
-
+        DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, map, false);
     }
 
     // DXライブラリ終了処理
