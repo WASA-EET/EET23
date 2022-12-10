@@ -1,6 +1,7 @@
 #include "DxLib.h"
 #include "json.hpp"
 #include "httplib.h"
+
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
 
