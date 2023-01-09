@@ -3,8 +3,32 @@
 #include "json.hpp"
 #include "httplib.h"
 
+#define BIWAKO
+// #define HUJIKAWA
+// #define OOTONE
+
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
+
+#if defined(BIWAKO)
+static const char* IMAGE_PATH = "biwako.png";
+static const double C_LAT = 35.35; // 中心の緯度
+static const double C_LON = 136.15; // 中心の経度
+static const double X_SCALE = 4100.0; // X座標の拡大率
+static const double Y_SCALE = -5050.0; // Y座標の拡大率
+#elif defined(HUJIKAWA)
+static const char* IMAGE_PATH = "hujikawa.png";
+static const double C_LAT = 0.0; // 中心の緯度
+static const double C_LON = 0.0; // 中心の経度
+static const double X_SCALE = 10000.0; // X座標の拡大率
+static const double Y_SCALE = 10000.0; // Y座標の拡大率
+#elif defined(OOTONE)
+static const char* IMAGE_PATH = "ootone.png";
+static const double C_LAT = 0.0; // 中心の緯度
+static const double C_LON = 0.0; // 中心の経度
+static const double X_SCALE = 10000.0; // X座標の拡大率
+static const double Y_SCALE = 10000.0; // Y座標の拡大率
+#endif
 
 static double roll = 0.0; // 左右の傾き
 static double pitch = 0.0; // 前後の傾き
@@ -12,6 +36,8 @@ static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
 static int altitude = 0; // 高度（cm）
 static int rpm = 0; // 回転数（rpm/min）
+static double latitude = 0.0; // 緯度
+static double longitude = 0.0; // 経度
 
 void get_data() {
     // 通信関係のこととかを色々書く
@@ -21,6 +47,10 @@ void get_data() {
     speed = GetRand(10);
     altitude = GetRand(1000);
     rpm = GetRand(300);
+
+    // 35.199357, 136.050708
+    latitude = 35.199357;
+    longitude = 136.050708;
 }
 
 int android_main() {
@@ -36,9 +66,13 @@ int android_main() {
 
     // ここで画像のロード、初期設定を行う
     int font = CreateFontToHandle(NULL, 400, 50);
-    int map = LoadGraph("biwako.png");
+    int map = LoadGraph(IMAGE_PATH);
     int count = 0;
-    int width = 50;
+    int bar_width = 50;
+
+    // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
+    //httplib::Client cli("http://192.168.4.1");
+    //auto res = cli.Get("/GetMeasurementData"); // マルチスレッド必須
 
     // 色の定義
     const unsigned int green = GetColor(0, 255, 0);
@@ -84,12 +118,18 @@ int android_main() {
         else if (roll < -0.5) { color_left = green; }
         else { color_left = blue; }
 
-        DrawBox(0, 0, SCREEN_WIDTH, width, color_top, true);
-        DrawBox(0, 0, width, SCREEN_HEIGHT, color_left, true);
-        DrawBox(0, SCREEN_HEIGHT - width, SCREEN_WIDTH, SCREEN_HEIGHT, color_bottom, true);
-        DrawBox(SCREEN_WIDTH - width, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color_right, true);
+        // 描画
+        DrawBox(0, 0, SCREEN_WIDTH, bar_width, color_top, true);
+        DrawBox(0, 0, bar_width, SCREEN_HEIGHT, color_left, true);
+        DrawBox(0, SCREEN_HEIGHT - bar_width, SCREEN_WIDTH, SCREEN_HEIGHT, color_bottom, true);
+        DrawBox(SCREEN_WIDTH - bar_width, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color_right, true);
+
+        int x = (int)((longitude - C_LON) * X_SCALE);
+        int y = (int)((latitude - C_LAT) * Y_SCALE);
+        x += SCREEN_WIDTH / 2;
+        y += SCREEN_HEIGHT / 2;
+        DrawCircle(x, y, 1, green);
     }
-    // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 
     // DXライブラリ終了処理
     DxLib_End();
