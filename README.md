@@ -8,6 +8,6 @@
 といった感じになっています。ちなみに、地図はネットにつなげているわけではなく、大利根、富士川、琵琶湖だけの画像をアプリに内蔵して描画しています。
 
 ## Credit
-[ＤＸライブラリ（描画系を楽に処理するため）](https://dxlib.xsrv.jp/index.html)
-[Json for Modern C++（C++でJSONを扱うため）](https://github.com/nlohmann/json)
-[cpp-httplib（C++でHTTP通信を行うため）](https://github.com/yhirose/cpp-httplib)
+* [ＤＸライブラリ（描画系を楽に処理するため）](https://dxlib.xsrv.jp/index.html)
+* [Json for Modern C++（C++でJSONを扱うため）](https://github.com/nlohmann/json)
+* [cpp-httplib（C++でHTTP通信を行うため）](https://github.com/yhirose/cpp-httplib)
