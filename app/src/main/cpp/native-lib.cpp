@@ -1,9 +1,16 @@
 #include <thread>
 #include <vector>
+#include <string>
 #include "DxLib.h"
 #include "json.hpp"
 #include "httplib.h"
 
+// 風の強さと向き、出力ワット数
+
+// マイコンネットワークに接続しない場合のテスト用
+// #define TEST_CASE
+
+// 場所の指定（座標によって切り替えるのもありだがめんどくさいので却下）
 #define BIWAKO
 // #define HUJIKAWA
 // #define OOTONE
@@ -13,26 +20,33 @@ static const int SCREEN_HEIGHT = 2340;
 static const unsigned int GREEN = GetColor(0, 255, 0);
 static const unsigned int RED = GetColor(255, 0, 0);
 static const unsigned int BLUE = GetColor(0, 0, 255);
+static const char *IMAGE_PLANE_PATH = "plane.png";
 
 #if defined(BIWAKO)
-static const char *IMAGE_PATH = "biwako.png";
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+static const char *IMAGE_MAP_PATH = "biwako.png";
 static const double C_LAT = 35.35; // 中心の緯度
 static const double C_LON = 136.15; // 中心の経度
 static const double X_SCALE = 4100.0; // X座標の拡大率
 static const double Y_SCALE = -5050.0; // Y座標の拡大率
 #elif defined(HUJIKAWA)
-static const char* IMAGE_PATH = "hujikawa.png";
-static const double C_LAT = 0.0; // 中心の緯度
-static const double C_LON = 0.0; // 中心の経度
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+static const char *IMAGE_MAP_PATH = "hujikawa.png";
+static const double C_LAT = 35.121; // 中心の緯度
+static const double C_LON = 138.6315; // 中心の経度
 static const double X_SCALE = 10000.0; // X座標の拡大率
 static const double Y_SCALE = 10000.0; // Y座標の拡大率
 #elif defined(OOTONE)
-static const char* IMAGE_PATH = "ootone.png";
+static const char *IMAGE_MAP_PATH = "ootone.png";
 static const double C_LAT = 0.0; // 中心の緯度
 static const double C_LON = 0.0; // 中心の経度
 static const double X_SCALE = 10000.0; // X座標の拡大率
 static const double Y_SCALE = 10000.0; // Y座標の拡大率
 #endif
+
+std::string JsonString;
+nlohmann::json JsonInput;
+// https://qiita.com/yohm/items/0f389ba5c5de4e2df9cf
 
 std::vector<int> trajectory_x; //可変長ベクトル x成分
 std::vector<int> trajectory_y; //可変長ベクトル y成分
@@ -45,8 +59,8 @@ static int rpm = 0; // 回転数（rpm/min）
 static double latitude = 35.199357; // 緯度
 static double longitude = 136.050708; // 経度
 
-void get_data() {
-    // 通信関係のこととかを色々書く
+void get_json_data() {
+#ifdef TEST_CASE
     roll = GetRand(10) - 5;
     pitch = GetRand(10) - 5;
     yaw = GetRand(10) - 5;
@@ -55,10 +69,33 @@ void get_data() {
     rpm = GetRand(300);
 
     // 35.199357, 136.050708
-    //latitude = 35.199357;
-    //longitude = 136.050708;
+    // latitude = 35.199357;
+    // longitude = 136.050708;
     latitude += 0.01;
     longitude += 0.01;
+#else
+    // 通信関係のこととかを色々書く
+    try
+    {
+        if (JsonString.empty())
+            return;
+        JsonInput = nlohmann::json::parse(JsonString);
+        roll = JsonInput["Roll"];
+        pitch = JsonInput["Pitch"];
+        yaw = JsonInput["Yaw"];
+        speed = JsonInput["AirSpeed"];
+        altitude = JsonInput["Altitude"];
+        rpm = JsonInput["PropellerRotationSpeed"];
+        latitude = JsonInput["Latitude"];
+        longitude = JsonInput["Longitude"];
+    }
+    catch (nlohmann::json::exception& e)
+    {
+        // 文字列をJsonに変換できない場合に行う処理
+        // Jsonに入っているべきデータが存在しない場合
+        // まあ今回は何もしないんですけど
+    }
+#endif
 }
 
 int android_main() {
@@ -74,25 +111,30 @@ int android_main() {
 
     // ここで画像のロード、初期設定を行う
     int font = CreateFontToHandle(nullptr, 400, 50);
-    int map = LoadGraph(IMAGE_PATH);
+    int image_map = LoadGraph(IMAGE_MAP_PATH);
+    int image_plane = LoadGraph(IMAGE_PLANE_PATH);
     int count = 0;
     int bar_width = 50;
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
-    //httplib::Client cli("http://192.168.4.1");
-    //auto res = cli.Get("/GetMeasurementData"); // マルチスレッド必須
+    std::thread http_thread = std::thread([]() {
+        httplib::Client cli("http://192.168.4.1");
+        while (true) {
+#ifndef TEST_CASE
+            JsonString = cli.Get("/GetMeasurementData");
+#endif
+            get_json_data();
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+    });
+    http_thread.detach();
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
         count++;
 
-        // 1秒に1回実行される
-        if (count % 60 == 0) {
-            get_data();
-        }
-
         // 地図の表示
-        DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, map, false);
+        DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map, false);
 
         // 数値の表示
         int wide;
@@ -133,8 +175,11 @@ int android_main() {
         x += SCREEN_WIDTH / 2;
         y += SCREEN_HEIGHT / 2;
 
-        // 現在地の表示
-        DrawCircle(x, y, 5, GREEN);
+        // 現在地に矢印を表示
+        int w, h;
+        GetGraphSize(image_plane, &w, &h);
+        DrawRotaGraph(x, y, 0.3, yaw, image_plane, true);
+        // DrawCircle(x, y, 5, RED);
 
         // 座標履歴（画面の座標）の追加
         if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
