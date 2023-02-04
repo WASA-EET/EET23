@@ -22,6 +22,9 @@ static const unsigned int RED = GetColor(255, 0, 0);
 static const unsigned int BLUE = GetColor(0, 0, 255);
 static const char *IMAGE_PLANE_PATH = "plane.png";
 
+// MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出す）
+// X座標の倍率=2.8312×(2^MapBoxの倍率)
+// Y座標の倍率=-3.5217×(2^MapBoxの倍率)
 #if defined(BIWAKO)
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH = "biwako.png";
@@ -34,14 +37,15 @@ static const double Y_SCALE = -5050.0; // Y座標の拡大率
 static const char *IMAGE_MAP_PATH = "hujikawa.png";
 static const double C_LAT = 35.121; // 中心の緯度
 static const double C_LON = 138.6315; // 中心の経度
-static const double X_SCALE = 10000.0; // X座標の拡大率
-static const double Y_SCALE = 10000.0; // Y座標の拡大率
+static const double X_SCALE = 220650.0; // X座標の拡大率
+static const double Y_SCALE = -274500.0; // Y座標の拡大率
 #elif defined(OOTONE)
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH = "ootone.png";
-static const double C_LAT = 0.0; // 中心の緯度
-static const double C_LON = 0.0; // 中心の経度
-static const double X_SCALE = 10000.0; // X座標の拡大率
-static const double Y_SCALE = 10000.0; // Y座標の拡大率
+static const double C_LAT = 35.8594; // 中心の緯度
+static const double C_LON = 140.2412; // 中心の経度
+static const double X_SCALE = 156500.0; // X座標の拡大率
+static const double Y_SCALE = -194000.0; // Y座標の拡大率
 #endif
 
 std::string JsonString;
@@ -56,8 +60,8 @@ static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
 static int altitude = 0; // 高度（cm）
 static int rpm = 0; // 回転数（rpm/min）
-static double latitude = 35.199357; // 緯度
-static double longitude = 136.050708; // 経度
+static double latitude = 35.8582; // 緯度
+static double longitude = 140.2383; // 経度
 
 void get_json_data() {
 #ifdef TEST_CASE
@@ -71,8 +75,8 @@ void get_json_data() {
     // 35.199357, 136.050708
     // latitude = 35.199357;
     // longitude = 136.050708;
-    latitude += 0.01;
-    longitude += 0.01;
+    latitude += 0.0001;
+    longitude += 0.0008;
 #else
     // 通信関係のこととかを色々書く
     try
@@ -120,11 +124,11 @@ int android_main() {
     std::thread http_thread = std::thread([]() {
         httplib::Client cli("http://192.168.4.1");
         while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 #ifndef TEST_CASE
             JsonString = cli.Get("/GetMeasurementData");
 #endif
             get_json_data();
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     });
     http_thread.detach();
