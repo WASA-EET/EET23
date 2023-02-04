@@ -126,7 +126,7 @@ int android_main() {
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 #ifndef TEST_CASE
-            JsonString = cli.Get("/GetMeasurementData");
+            JsonString = cli.Get("/GetMeasurementData")->body;
 #endif
             get_json_data();
         }
