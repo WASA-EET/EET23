@@ -11,8 +11,8 @@
 
 # 作成者
 * [みずもん（23代電装班長）](https://github.com/21km43)
-* [（24代電装班員）](https://github.com/)
-* [（24代電装班員）](https://github.com/)
+* （24代電装班員）
+* （24代電装班員）
 
 # 使用したライブラリ
 * [ＤＸライブラリ（描画系を楽に処理するため）](https://dxlib.xsrv.jp/index.html)
