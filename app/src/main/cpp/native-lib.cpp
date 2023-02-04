@@ -21,10 +21,12 @@
 
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
-static const unsigned int GREEN = GetColor(0, 255, 0);
-static const unsigned int RED = GetColor(255, 0, 0);
-static const unsigned int BLUE = GetColor(0, 0, 255);
+static const unsigned int RED = GetColor(0xff, 0x4b, 0x00);
+static const unsigned int YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
+static const unsigned int YELLOW = GetColor(0xf2, 0xe7, 0x00);
+static const unsigned int GREEN = GetColor(0x00, 0xb0, 0x6b);
 static const char *IMAGE_PLANE_PATH = "plane.png";
+static const double DEFAULT_PITCH = 0.0;
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出す）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
@@ -158,20 +160,25 @@ int android_main() {
         DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
                                  GetColor(255, 255, 255), font, "%d", rpm);
 
-        // ロールとピッチに応じて色を変える（0.5度以下→青、0.5~3.0度→緑、3.0度以上→赤）
+        // ロールとピッチに応じて色を変える
+        // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
         unsigned int color_top, color_bottom, color_left, color_right;
-        if (pitch > 3.0) { color_top = RED; }
-        else if (pitch > 0.5) { color_top = GREEN; }
-        else { color_top = BLUE; }
-        if (pitch < -3.0) { color_bottom = RED; }
-        else if (pitch < -0.5) { color_bottom = GREEN; }
-        else { color_bottom = BLUE; }
+        if (pitch - DEFAULT_PITCH > 3.0) { color_top = RED; }
+        else if (pitch - DEFAULT_PITCH > 2.0) { color_top = YELLOW_RED; }
+        else if (pitch - DEFAULT_PITCH > 1.0) { color_top = YELLOW; }
+        else { color_top = GREEN; }
+        if (pitch - DEFAULT_PITCH < -3.0) { color_bottom = RED; }
+        else if (pitch - DEFAULT_PITCH < -2.0) { color_bottom = YELLOW_RED; }
+        else if (pitch - DEFAULT_PITCH < -1.0) { color_bottom = YELLOW; }
+        else { color_bottom = GREEN; }
         if (roll > 3.0) { color_right = RED; }
-        else if (roll > 0.5) { color_right = GREEN; }
-        else { color_right = BLUE; }
+        else if (roll > 2.0) { color_right = YELLOW_RED; }
+        else if (roll > 1.0) { color_right = YELLOW; }
+        else { color_right = GREEN; }
         if (roll < -3.0) { color_left = RED; }
-        else if (roll < -0.5) { color_left = GREEN; }
-        else { color_left = BLUE; }
+        else if (roll < -2.0) { color_left = YELLOW_RED; }
+        else if (roll < -1.0) { color_left = YELLOW; }
+        else { color_left = GREEN; }
 
         // 描画
         DrawBox(0, 0, SCREEN_WIDTH, bar_width, color_top, true);
