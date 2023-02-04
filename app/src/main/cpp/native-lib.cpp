@@ -5,7 +5,11 @@
 #include "json.hpp"
 #include "httplib.h"
 
-// 風の強さと向き、出力ワット数
+/*
+ *  リポジトリ：https://github.com/WASA-EET/EET23
+ */
+
+// TODO: 風の強さと向き、出力ワット数
 
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
@@ -97,7 +101,8 @@ void get_json_data() {
     {
         // 文字列をJsonに変換できない場合に行う処理
         // Jsonに入っているべきデータが存在しない場合
-        // まあ今回は何もしないんですけど
+        //clsDx();
+        //printfDx(e.what());
     }
 #endif
 }
@@ -124,9 +129,10 @@ int android_main() {
     std::thread http_thread = std::thread([]() {
         httplib::Client cli("http://192.168.4.1");
         while (true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
-            JsonString = cli.Get("/GetMeasurementData")->body;
+            httplib::Result res = cli.Get("/GetMeasurementData");
+            if (res) JsonString = res->body;
 #endif
             get_json_data();
         }
