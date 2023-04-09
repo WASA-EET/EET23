@@ -1,6 +1,6 @@
 #include <thread>
-#include <vector>
 #include <string>
+#include <fstream>
 #include "DxLib.h"
 #include "json.hpp"
 #include "httplib.h"
@@ -9,7 +9,7 @@
  *  リポジトリ：https://github.com/WASA-EET/EET23
  */
 
-// TODO: 風の強さと向き、出力ワット数
+// TODO: 風の強さと向き、出力ワット数、ケイデンス
 
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
@@ -69,6 +69,79 @@ static int rpm = 0; // 回転数（rpm/min）
 static double latitude = 35.8582; // 緯度
 static double longitude = 140.2383; // 経度
 
+static const std::string LOG_DIRECTORY = "/storage/emulated/0/EET23/";
+static const std::string LOG_EXTENSION = ".csv";
+static bool log_state = false;
+static std::ofstream ofs;
+
+std::string time_string() {
+    DATEDATA Date;
+    GetDateTime(&Date);
+    return
+        std::to_string(Date.Year) +
+        std::to_string(Date.Mon) +
+        std::to_string(Date.Day) +
+        std::to_string(Date.Hour) +
+        std::to_string(Date.Min) +
+        std::to_string(Date.Sec);
+}
+
+// ログ保存用
+void start_log() {
+    std::string path = LOG_DIRECTORY + time_string() + LOG_EXTENSION;
+    // フォルダが存在しないとファイルを作成できないので予めフォルダは作っておくこと！
+    ofs.open(path);
+    if (!ofs) {
+        clsDx();
+        printfDx("Failed to open %s\n", path.c_str());
+        return;
+    }
+
+    // とりあえず1行目を埋める
+    ofs << "RunningTime, Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Ladder, Elevator" << std::endl;
+
+    std::thread http_thread = std::thread([]() {
+        while (ofs) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            ofs << JsonInput["RunningTime"] << ", ";
+            ofs << JsonInput["Year"] << ", ";
+            ofs << JsonInput["Month"] << ", ";
+            ofs << JsonInput["Day"] << ", ";
+            ofs << JsonInput["Hour"] << ", ";
+            ofs << JsonInput["Minute"] << ", ";
+            ofs << JsonInput["Second"] << ", ";
+            ofs << JsonInput["Latitude"] << ", ";
+            ofs << JsonInput["Longitude"] << ", ";
+            ofs << JsonInput["GPSAltitude"] << ", ";
+            ofs << JsonInput["GPSCourse"] << ", ";
+            ofs << JsonInput["GPSSpeed"] << ", ";
+            ofs << JsonInput["Roll"] << ", ";
+            ofs << JsonInput["Pitch"] << ", ";
+            ofs << JsonInput["Yaw"] << ", ";
+            ofs << JsonInput["Temperature"] << ", ";
+            ofs << JsonInput["Pressure"] << ", ";
+            ofs << JsonInput["GroundPressure"] << ", ";
+            ofs << JsonInput["DPSAltitude"] << ", ";
+            ofs << JsonInput["Altitude"] << ", ";
+            ofs << JsonInput["AirSpeed"] << ", ";
+            ofs << JsonInput["PropellerRotationSpeed"] << ", ";
+            ofs << JsonInput["Cadence"] << ", ";
+            ofs << JsonInput["Ladder"] << ", ";
+            ofs << JsonInput["Elevator"] << ", ";
+            ofs << std::endl;
+        }
+        log_state = false;
+    });
+    http_thread.detach();
+
+    log_state = true;
+}
+void stop_log() {
+    ofs.close();
+    log_state = false;
+}
+
+
 void get_json_data() {
 #ifdef TEST_CASE
     roll = GetRand(10) - 5;
@@ -85,8 +158,7 @@ void get_json_data() {
     longitude += 0.0008;
 #else
     // 通信関係のこととかを色々書く
-    try
-    {
+    try {
         if (JsonString.empty())
             return;
         JsonInput = nlohmann::json::parse(JsonString);
@@ -99,12 +171,11 @@ void get_json_data() {
         latitude = JsonInput["Latitude"];
         longitude = JsonInput["Longitude"];
     }
-    catch (nlohmann::json::exception& e)
-    {
+    catch (nlohmann::json::exception &e) {
         // 文字列をJsonに変換できない場合に行う処理
         // Jsonに入っているべきデータが存在しない場合
-        //clsDx();
-        //printfDx(e.what());
+        clsDx();
+        printfDx(e.what());
     }
 #endif
 }
@@ -124,7 +195,7 @@ int android_main() {
     int font = CreateFontToHandle(nullptr, 400, 50);
     int image_map = LoadGraph(IMAGE_MAP_PATH);
     int image_plane = LoadGraph(IMAGE_PLANE_PATH);
-    int count = 0;
+    int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
@@ -143,7 +214,6 @@ int android_main() {
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
-        count++;
 
         // 地図の表示
         DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map, false);
@@ -200,7 +270,8 @@ int android_main() {
 
         // 座標履歴（画面の座標）の追加
         if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
-            if (trajectory_x.empty() || trajectory_y.empty() || trajectory_x.back() != x || trajectory_y.back() != y) {
+            if (trajectory_x.empty() || trajectory_y.empty() || trajectory_x.back() != x ||
+                trajectory_y.back() != y) {
                 trajectory_x.push_back(x);
                 trajectory_y.push_back(y);
             }
@@ -208,7 +279,28 @@ int android_main() {
 
         // 軌跡の描画
         for (int i = 1; i < trajectory_x.size(); i++) {
-            DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],RED, 5);
+            DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
+                     RED, 5);
+        }
+
+        // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が０でない場合）
+        if (GetTouchInputNum() != 0)
+            touch_time++;
+        else
+            touch_time = 0;
+
+        // 2秒以上連続で画面に触れたらログの記録を開始（または停止）
+        if (touch_time > 120) {
+            touch_time = 0;
+            if (!log_state)
+                start_log();
+            else
+                stop_log();
+        }
+
+        // ログを収集していなければ左上に四角を描画
+        if (!log_state) {
+            DrawBox(0, 0, bar_width, bar_width, 0xffffffff, true);
         }
     }
 
