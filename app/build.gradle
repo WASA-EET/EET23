@@ -10,7 +10,7 @@ android {
         applicationId "com.wasa.eet23"
         minSdk 24
         targetSdk 33
-        versionCode 1
+        versionCode 3
         versionName "1.0"
 
         // 64ビットのみのAPKにすること！（ＤＸライブラリは64ビットにしか対応していない）

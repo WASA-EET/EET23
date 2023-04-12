@@ -14,11 +14,6 @@
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
-// 場所の指定（座標によって切り替えるのもありだがめんどくさいので却下）
-// #define BIWAKO
-// #define HUJIKAWA
-// #define OOTONE
-
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
 static const unsigned int RED = GetColor(0xff, 0x4b, 0x00);
@@ -31,34 +26,12 @@ static const double DEFAULT_PITCH = 0.0;
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
 // Y座標の倍率=-3.5217×(2^MapBoxの倍率)
-/*
-#if defined(BIWAKO)
-static const char *IMAGE_MAP_PATH = "biwako.png";
-static const double C_LAT = 35.35; // 中心の緯度
-static const double C_LON = 136.15; // 中心の経度
-static const double X_SCALE = 4100.0; // X座標の拡大率
-static const double Y_SCALE = -5050.0; // Y座標の拡大率
-#elif defined(HUJIKAWA)
-static const char *IMAGE_MAP_PATH = "hujikawa.png";
-static const double C_LAT = 35.121; // 中心の緯度
-static const double C_LON = 138.6315; // 中心の経度
-static const double X_SCALE = 220650.0; // X座標の拡大率
-static const double Y_SCALE = -274500.0; // Y座標の拡大率
-#elif defined(OOTONE)
-static const char *IMAGE_MAP_PATH = "ootone.png";
-static const double C_LAT = 35.8594; // 中心の緯度
-static const double C_LON = 140.2412; // 中心の経度
-static const double X_SCALE = 156500.0; // X座標の拡大率
-static const double Y_SCALE = -194000.0; // Y座標の拡大率
-#endif
-*/
 enum {
     PLACE_BIWAKO,
     PLACE_HUJIKAWA,
     PLACE_OOTONE,
     PLACE_MAX,
 };
-
 // 各場所のURL（琵琶湖、富士川、大利根）
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
@@ -95,11 +68,11 @@ std::string time_string() {
     DATEDATA Date;
     GetDateTime(&Date);
     return
-            std::to_string(Date.Year) +
-            std::to_string(Date.Mon) +
-            std::to_string(Date.Day) +
-            std::to_string(Date.Hour) +
-            std::to_string(Date.Min) +
+            std::to_string(Date.Year) + "_" +
+            std::to_string(Date.Mon) + "_" +
+            std::to_string(Date.Day) + "_" +
+            std::to_string(Date.Hour) + "_" +
+            std::to_string(Date.Min) + "_" +
             std::to_string(Date.Sec);
 }
 
