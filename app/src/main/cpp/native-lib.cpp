@@ -283,14 +283,14 @@ int android_main() {
                      RED, 5);
         }
 
-        // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が０でない場合）
-        if (GetTouchInputNum() != 0)
+        // 画面に2本以上の指でタッチされている場合（タッチパネルのタッチされている箇所の数が2以上の場合）
+        if (GetTouchInputNum() > 1)
             touch_time++;
         else
             touch_time = 0;
 
         // 2秒以上連続で画面に触れたらログの記録を開始（または停止）
-        if (touch_time > 120) {
+        if (touch_time > 60) {
             touch_time = 0;
             if (!log_state)
                 start_log();
