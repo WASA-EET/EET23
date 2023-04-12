@@ -83,8 +83,8 @@ static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
 static int altitude = 0; // 高度（cm）
 static int rpm = 0; // 回転数（rpm/min）
-static double latitude = 35.8582; // 緯度
-static double longitude = 140.2383; // 経度
+static double latitude = 0.0; // 緯度
+static double longitude = 0.0; // 経度
 
 static const std::string LOG_DIRECTORY = "/storage/emulated/0/EET23/";
 static const std::string LOG_EXTENSION = ".csv";
@@ -293,7 +293,7 @@ int android_main() {
         DrawRotaGraph(x, y, 0.3, yaw, image_plane, true);
         // DrawCircle(x, y, 5, RED);
 
-        // 座標履歴（画面の座標）の追加
+        // 軌跡の追加
         if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
             if (trajectory_x.empty() || trajectory_y.empty() || trajectory_x.back() != x ||
                 trajectory_y.back() != y) {
@@ -308,8 +308,8 @@ int android_main() {
                      RED, 5);
         }
 
-        // 画面に2本以上の指でタッチされている場合（タッチパネルのタッチされている箇所の数が2以上の場合）
-        if (GetTouchInputNum() > 1)
+        // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
+        if (GetTouchInputNum() > 0)
             touch_time++;
         else
             touch_time = 0;
@@ -317,6 +317,11 @@ int android_main() {
         // 1秒以上連続2本以上の指で画面に触れたら
         if (touch_time > 60) {
             touch_time = 0;
+            // 1本なら軌跡を削除
+            if (GetTouchInputNum() == 1) {
+                trajectory_x.clear();
+                trajectory_y.clear();
+            }
             // 2本の場合はログの記録を開始（または停止）
             if (GetTouchInputNum() == 2) {
                 if (!log_state)
@@ -327,6 +332,8 @@ int android_main() {
             // 3本の場合は地図の切り替え
             if (GetTouchInputNum() == 3) {
                 current_place = (current_place + 1) % PLACE_MAX;
+                trajectory_x.clear();
+                trajectory_y.clear();
             }
         }
 
