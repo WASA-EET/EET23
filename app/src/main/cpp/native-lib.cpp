@@ -15,7 +15,7 @@
 // #define TEST_CASE
 
 // 場所の指定（座標によって切り替えるのもありだがめんどくさいので却下）
-#define BIWAKO
+// #define BIWAKO
 // #define HUJIKAWA
 // #define OOTONE
 
@@ -28,31 +28,48 @@ static const unsigned int GREEN = GetColor(0x00, 0xb0, 0x6b);
 static const char *IMAGE_PLANE_PATH = "plane.png";
 static const double DEFAULT_PITCH = 0.0;
 
-// MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出す）
+// MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
 // Y座標の倍率=-3.5217×(2^MapBoxの倍率)
+/*
 #if defined(BIWAKO)
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH = "biwako.png";
 static const double C_LAT = 35.35; // 中心の緯度
 static const double C_LON = 136.15; // 中心の経度
 static const double X_SCALE = 4100.0; // X座標の拡大率
 static const double Y_SCALE = -5050.0; // Y座標の拡大率
 #elif defined(HUJIKAWA)
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH = "hujikawa.png";
 static const double C_LAT = 35.121; // 中心の緯度
 static const double C_LON = 138.6315; // 中心の経度
 static const double X_SCALE = 220650.0; // X座標の拡大率
 static const double Y_SCALE = -274500.0; // Y座標の拡大率
 #elif defined(OOTONE)
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH = "ootone.png";
 static const double C_LAT = 35.8594; // 中心の緯度
 static const double C_LON = 140.2412; // 中心の経度
 static const double X_SCALE = 156500.0; // X座標の拡大率
 static const double Y_SCALE = -194000.0; // Y座標の拡大率
 #endif
+*/
+enum {
+    PLACE_BIWAKO,
+    PLACE_HUJIKAWA,
+    PLACE_OOTONE,
+    PLACE_MAX,
+};
+
+// 各場所のURL（琵琶湖、富士川、大利根）
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+static const char *IMAGE_MAP_PATH[PLACE_MAX] = {"biwako.png", "hujikawa.png", "ootone.png"};
+static const double C_LAT[PLACE_MAX] = {35.35, 35.121, 35.8594}; // 中心の緯度
+static const double C_LON[PLACE_MAX] = {136.15, 138.6315, 140.2412}; // 中心の経度
+static const double X_SCALE[PLACE_MAX] = {4100.0, 220650.0, 156500.0}; // X座標の拡大率
+static const double Y_SCALE[PLACE_MAX] = {-5050.0, -274500.0, -194000.0}; // Y座標の拡大率
+
+static int current_place = 0;
 
 std::string JsonString;
 nlohmann::json JsonInput;
@@ -78,18 +95,19 @@ std::string time_string() {
     DATEDATA Date;
     GetDateTime(&Date);
     return
-        std::to_string(Date.Year) +
-        std::to_string(Date.Mon) +
-        std::to_string(Date.Day) +
-        std::to_string(Date.Hour) +
-        std::to_string(Date.Min) +
-        std::to_string(Date.Sec);
+            std::to_string(Date.Year) +
+            std::to_string(Date.Mon) +
+            std::to_string(Date.Day) +
+            std::to_string(Date.Hour) +
+            std::to_string(Date.Min) +
+            std::to_string(Date.Sec);
 }
 
 // ログ保存用
 void start_log() {
     std::string path = LOG_DIRECTORY + time_string() + LOG_EXTENSION;
     // フォルダが存在しないとファイルを作成できないので予めフォルダは作っておくこと！
+    // あと権限の設定もお忘れなく（これに関しては端末側で有効化する必要もある）
     ofs.open(path);
     if (!ofs) {
         clsDx();
@@ -98,9 +116,12 @@ void start_log() {
     }
 
     // とりあえず1行目を埋める
-    ofs << "RunningTime, Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Ladder, Elevator" << std::endl;
+    ofs
+            << "RunningTime, Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Ladder, Elevator"
+            << std::endl;
 
     std::thread http_thread = std::thread([]() {
+
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             ofs << JsonInput["RunningTime"] << ", ";
@@ -136,6 +157,7 @@ void start_log() {
 
     log_state = true;
 }
+
 void stop_log() {
     ofs.close();
     log_state = false;
@@ -193,7 +215,10 @@ int android_main() {
 
     // ここで画像のロード、初期設定を行う
     int font = CreateFontToHandle(nullptr, 400, 50);
-    int image_map = LoadGraph(IMAGE_MAP_PATH);
+    int image_map[PLACE_MAX];
+    for (int i = 0; i < PLACE_MAX; i++) {
+        image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
+    }
     int image_plane = LoadGraph(IMAGE_PLANE_PATH);
     int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
@@ -216,7 +241,7 @@ int android_main() {
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
 
         // 地図の表示
-        DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map, false);
+        DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map[current_place], false);
 
         // 数値の表示
         int wide;
@@ -257,8 +282,8 @@ int android_main() {
         DrawBox(SCREEN_WIDTH - bar_width, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color_right, true);
 
         // 緯度経度をピクセルの座標に変換する
-        int x = (int) ((longitude - C_LON) * X_SCALE);
-        int y = (int) ((latitude - C_LAT) * Y_SCALE);
+        int x = (int) ((longitude - C_LON[current_place]) * X_SCALE[current_place]);
+        int y = (int) ((latitude - C_LAT[current_place]) * Y_SCALE[current_place]);
         x += SCREEN_WIDTH / 2;
         y += SCREEN_HEIGHT / 2;
 
@@ -289,13 +314,20 @@ int android_main() {
         else
             touch_time = 0;
 
-        // 2秒以上連続で画面に触れたらログの記録を開始（または停止）
+        // 1秒以上連続2本以上の指で画面に触れたら
         if (touch_time > 60) {
             touch_time = 0;
-            if (!log_state)
-                start_log();
-            else
-                stop_log();
+            // 2本の場合はログの記録を開始（または停止）
+            if (GetTouchInputNum() == 2) {
+                if (!log_state)
+                    start_log();
+                else
+                    stop_log();
+            }
+            // 3本の場合は地図の切り替え
+            if (GetTouchInputNum() == 3) {
+                current_place = (current_place + 1) % PLACE_MAX;
+            }
         }
 
         // ログを収集していなければ左上に四角を描画
