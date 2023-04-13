@@ -59,7 +59,8 @@ static int rpm = 0; // 回転数（rpm/min）
 static double latitude = 0.0; // 緯度
 static double longitude = 0.0; // 経度
 
-static const std::string LOG_DIRECTORY = "/storage/emulated/0/EET23/";
+// 外部ストレージでアクセスできるのは「/storage/emulated/0/Android/data/[パッケージ名]/files/」に限られる
+static const std::string LOG_DIRECTORY = "/storage/emulated/0/Android/data/com.wasa.eet23/files/";
 static const std::string LOG_EXTENSION = ".csv";
 static bool log_state = false;
 static std::ofstream ofs;
