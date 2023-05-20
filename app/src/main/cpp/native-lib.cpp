@@ -9,7 +9,7 @@
  *  リポジトリ：https://github.com/WASA-EET/EET23
  */
 
-// TODO: 風の強さと向き、出力ワット数、ケイデンス
+// TODO: 風の強さと向き（多分無理）
 
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
@@ -91,7 +91,7 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "RunningTime, Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Ladder, Elevator"
+            << "RunningTime, Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Ladder, Elevator"
             << std::endl;
 
     std::thread http_thread = std::thread([]() {
@@ -121,6 +121,7 @@ void start_log() {
             ofs << JsonInput["AirSpeed"] << ", ";
             ofs << JsonInput["PropellerRotationSpeed"] << ", ";
             ofs << JsonInput["Cadence"] << ", ";
+            ofs << JsonInput["Power"] << ", ";
             ofs << JsonInput["Ladder"] << ", ";
             ofs << JsonInput["Elevator"] << ", ";
             ofs << std::endl;
@@ -162,7 +163,7 @@ void get_json_data() {
         pitch = JsonInput["Pitch"];
         yaw = JsonInput["Yaw"];
         speed = JsonInput["AirSpeed"];
-        altitude = JsonInput["Altitude"];
+        altitude = JsonInput["DPSAltitude"];
         rpm = JsonInput["PropellerRotationSpeed"];
         latitude = JsonInput["Latitude"];
         longitude = JsonInput["Longitude"];
