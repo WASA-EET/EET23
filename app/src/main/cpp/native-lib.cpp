@@ -9,8 +9,6 @@
  *  リポジトリ：https://github.com/WASA-EET/EET23
  */
 
-// TODO: 風の強さと向き（多分無理）
-
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
@@ -32,7 +30,7 @@ enum {
     PLACE_OOTONE,
     PLACE_MAX,
 };
-// 各場所のURL（琵琶湖、富士川、大利根）
+// 各場所のURL（琵琶湖、富士川、大利根）※ MAPBOXからダウンロード可能
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
@@ -46,7 +44,7 @@ static int current_place = 0;
 
 std::string JsonString;
 nlohmann::json JsonInput;
-// https://qiita.com/yohm/items/0f389ba5c5de4e2df9cf
+// 参考：https://qiita.com/yohm/items/0f389ba5c5de4e2df9cf
 
 std::vector<int> trajectory_x; //可変長ベクトル x成分
 std::vector<int> trajectory_y; //可変長ベクトル y成分
@@ -55,7 +53,8 @@ static double pitch = 0.0; // 前後の傾き
 static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
 static int altitude = 0; // 高度（cm）
-static int rpm = 0; // 回転数（rpm/min）
+static int rpm = 0; // ペラ回転数（rpm/min）
+static int power = 0; // 出力（watt）
 static double latitude = 0.0; // 緯度
 static double longitude = 0.0; // 経度
 
@@ -221,14 +220,17 @@ int android_main() {
         // 数値の表示
         int wide;
         wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 100,
+        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
                                  GetColor(255, 255, 255), font, "%.1f", speed);
         wide = GetDrawFormatStringWidthToHandle(font, "%d", altitude);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 900,
+        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
                                  GetColor(255, 255, 255), font, "%d", altitude);
         wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
+        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
                                  GetColor(255, 255, 255), font, "%d", rpm);
+        wide = GetDrawFormatStringWidthToHandle(font, "%d", power);
+        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
+                                 GetColor(255, 255, 255), font, "%d", power);
 
         // ロールとピッチに応じて色を変える
         // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
