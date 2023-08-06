@@ -90,14 +90,13 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "RunningTime, Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Ladder, Elevator"
+            << "Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Ladder, Elevator, RunningTime"
             << std::endl;
 
     std::thread http_thread = std::thread([]() {
 
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            ofs << JsonInput["RunningTime"] << ", ";
             ofs << JsonInput["Year"] << ", ";
             ofs << JsonInput["Month"] << ", ";
             ofs << JsonInput["Day"] << ", ";
@@ -123,6 +122,7 @@ void start_log() {
             ofs << JsonInput["Power"] << ", ";
             ofs << JsonInput["Ladder"] << ", ";
             ofs << JsonInput["Elevator"] << ", ";
+            ofs << JsonInput["RunningTime"] << ", ";
             ofs << std::endl;
         }
         log_state = false;
