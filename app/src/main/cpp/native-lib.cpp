@@ -14,10 +14,11 @@
 
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
-static const unsigned int RED = GetColor(0xff, 0x4b, 0x00);
-static const unsigned int YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
-static const unsigned int YELLOW = GetColor(0xf2, 0xe7, 0x00);
-static const unsigned int GREEN = GetColor(0x00, 0xb0, 0x6b);
+static const unsigned int COLOR_BLACK = GetColor(0x00, 0x00, 0x00);
+static const unsigned int COLOR_RED = GetColor(0xff, 0x4b, 0x00);
+static const unsigned int COLOR_YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
+static const unsigned int COLOR_YELLOW = GetColor(0xf2, 0xe7, 0x00);
+static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
 static const char *IMAGE_PLANE_PATH = "plane.png";
 static const double DEFAULT_PITCH = 0.0;
 
@@ -52,7 +53,7 @@ static double roll = 0.0; // 左右の傾き
 static double pitch = 0.0; // 前後の傾き
 static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
-static int altitude = 0; // 高度（cm）
+static double altitude = 0; // 高度（m）
 static int rpm = 0; // ペラ回転数（rpm/min）
 static int power = 0; // 出力（watt）
 static double latitude = 0.0; // 緯度
@@ -62,6 +63,7 @@ static double longitude = 0.0; // 経度
 static const std::string LOG_DIRECTORY = "/storage/emulated/0/Android/data/com.wasa.eet23/files/";
 static const std::string LOG_EXTENSION = ".csv";
 static bool log_state = false;
+static std::string res_log_body = "null";
 static std::ofstream ofs;
 
 std::string time_string() {
@@ -90,18 +92,17 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "Year, Month, Day, Hour, Minute, Second, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Ladder, Elevator, RunningTime"
+            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Ladder, Elevator, RunningTime"
             << std::endl;
 
-    std::thread http_thread = std::thread([]() {
-
+    std::thread ofs_thread = std::thread([]() {
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            ofs << JsonInput["Year"] << ", ";
-            ofs << JsonInput["Month"] << ", ";
+            ofs << JsonInput["Year"] << "/";
+            ofs << JsonInput["Month"] << "/";
             ofs << JsonInput["Day"] << ", ";
-            ofs << JsonInput["Hour"] << ", ";
-            ofs << JsonInput["Minute"] << ", ";
+            ofs << JsonInput["Hour"] << ":";
+            ofs << JsonInput["Minute"] << ":";
             ofs << JsonInput["Second"] << ", ";
             ofs << JsonInput["Latitude"] << ", ";
             ofs << JsonInput["Longitude"] << ", ";
@@ -127,7 +128,7 @@ void start_log() {
         }
         log_state = false;
     });
-    http_thread.detach();
+    ofs_thread.detach();
 
     log_state = true;
 }
@@ -199,14 +200,25 @@ int android_main() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread http_thread = std::thread([]() {
+        bool prev_log_state = log_state;
         httplib::Client cli("http://192.168.4.1");
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
-            httplib::Result res = cli.Get("/GetMeasurementData");
-            if (res) JsonString = res->body;
+            httplib::Result res_data = cli.Get("/GetMeasurementData");
+            if (res_data) JsonString = res_data->body;
 #endif
             get_json_data();
+
+            // マイコンのSDカードにもログを記録させる
+            if (prev_log_state != log_state) {
+                const char* log_url;
+                if (log_state) log_url = "/LogStart";
+                else log_url = "/LogStop";
+                httplib::Result res_log = cli.Get(log_url);
+                res_log_body = res_data->body;
+                prev_log_state = log_state;
+            }
         }
     });
     http_thread.detach();
@@ -222,9 +234,9 @@ int android_main() {
         wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
         DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
                                  GetColor(255, 255, 255), font, "%.1f", speed);
-        wide = GetDrawFormatStringWidthToHandle(font, "%d", altitude);
+        wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
         DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
-                                 GetColor(255, 255, 255), font, "%d", altitude);
+                                 GetColor(255, 255, 255), font, "%.2f", altitude);
         wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
         DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
                                  GetColor(255, 255, 255), font, "%d", rpm);
@@ -235,22 +247,22 @@ int android_main() {
         // ロールとピッチに応じて色を変える
         // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
         unsigned int color_top, color_bottom, color_left, color_right;
-        if (pitch - DEFAULT_PITCH > 3.0) { color_top = RED; }
-        else if (pitch - DEFAULT_PITCH > 2.0) { color_top = YELLOW_RED; }
-        else if (pitch - DEFAULT_PITCH > 1.0) { color_top = YELLOW; }
-        else { color_top = GREEN; }
-        if (pitch - DEFAULT_PITCH < -3.0) { color_bottom = RED; }
-        else if (pitch - DEFAULT_PITCH < -2.0) { color_bottom = YELLOW_RED; }
-        else if (pitch - DEFAULT_PITCH < -1.0) { color_bottom = YELLOW; }
-        else { color_bottom = GREEN; }
-        if (roll > 3.0) { color_right = RED; }
-        else if (roll > 2.0) { color_right = YELLOW_RED; }
-        else if (roll > 1.0) { color_right = YELLOW; }
-        else { color_right = GREEN; }
-        if (roll < -3.0) { color_left = RED; }
-        else if (roll < -2.0) { color_left = YELLOW_RED; }
-        else if (roll < -1.0) { color_left = YELLOW; }
-        else { color_left = GREEN; }
+        if (pitch - DEFAULT_PITCH > 3.0) { color_top = COLOR_RED; }
+        else if (pitch - DEFAULT_PITCH > 2.0) { color_top = COLOR_YELLOW_RED; }
+        else if (pitch - DEFAULT_PITCH > 1.0) { color_top = COLOR_YELLOW; }
+        else { color_top = COLOR_GREEN; }
+        if (pitch - DEFAULT_PITCH < -3.0) { color_bottom = COLOR_RED; }
+        else if (pitch - DEFAULT_PITCH < -2.0) { color_bottom = COLOR_YELLOW_RED; }
+        else if (pitch - DEFAULT_PITCH < -1.0) { color_bottom = COLOR_YELLOW; }
+        else { color_bottom = COLOR_GREEN; }
+        if (roll > 3.0) { color_right = COLOR_RED; }
+        else if (roll > 2.0) { color_right = COLOR_YELLOW_RED; }
+        else if (roll > 1.0) { color_right = COLOR_YELLOW; }
+        else { color_right = COLOR_GREEN; }
+        if (roll < -3.0) { color_left = COLOR_RED; }
+        else if (roll < -2.0) { color_left = COLOR_YELLOW_RED; }
+        else if (roll < -1.0) { color_left = COLOR_YELLOW; }
+        else { color_left = COLOR_GREEN; }
 
         // 描画
         DrawBox(0, 0, SCREEN_WIDTH, bar_width, color_top, true);
@@ -282,7 +294,7 @@ int android_main() {
         // 軌跡の描画
         for (int i = 1; i < trajectory_x.size(); i++) {
             DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
-                     RED, 5);
+                     COLOR_RED, 5);
         }
 
         // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
@@ -318,6 +330,9 @@ int android_main() {
         if (!log_state) {
             DrawBox(0, 0, bar_width, bar_width, 0xffffffff, true);
         }
+
+        // ログの記録要求に対するレスポンスを表示（めっちゃ小さく表示される）
+        DrawString(0, 0, res_log_body.c_str(), COLOR_BLACK);
     }
 
     // DXライブラリ終了処理
