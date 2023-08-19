@@ -4,12 +4,12 @@ plugins {
 
 android {
     namespace 'com.wasa.eet23'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.wasa.eet23"
         minSdk 24
-        targetSdk 33
+        targetSdk 34
         versionCode 4
         versionName "1.1"
 
