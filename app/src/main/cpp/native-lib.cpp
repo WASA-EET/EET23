@@ -216,7 +216,7 @@ int android_main() {
                 if (log_state) log_url = "/LogStart";
                 else log_url = "/LogStop";
                 httplib::Result res_log = cli.Get(log_url);
-                res_log_body = res_data->body;
+                res_log_body = res_log->body;
                 prev_log_state = log_state;
             }
         }
