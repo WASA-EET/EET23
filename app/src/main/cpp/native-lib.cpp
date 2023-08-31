@@ -163,7 +163,7 @@ void get_json_data() {
         pitch = JsonInput["Pitch"];
         yaw = JsonInput["Yaw"];
         speed = JsonInput["AirSpeed"];
-        altitude = JsonInput["DPSAltitude"];
+        altitude = JsonInput["Altitude"];
         rpm = JsonInput["PropellerRotationSpeed"];
         latitude = JsonInput["Latitude"];
         longitude = JsonInput["Longitude"];
