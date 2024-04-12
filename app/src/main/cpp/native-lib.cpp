@@ -4,6 +4,8 @@
 #include "DxLib.h"
 #include "json.hpp"
 #include "httplib.h"
+#include "hmac_sha256.hpp"
+#include "base64.hpp"
 
 /*
  *  リポジトリ：https://github.com/WASA-EET/EET23
@@ -92,7 +94,7 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Ladder, Elevator, RunningTime"
+            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Rudder, Elevator, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
@@ -121,7 +123,7 @@ void start_log() {
             ofs << JsonInput["PropellerRotationSpeed"] << ", ";
             ofs << JsonInput["Cadence"] << ", ";
             ofs << JsonInput["Power"] << ", ";
-            ofs << JsonInput["Ladder"] << ", ";
+            ofs << JsonInput["Rudder"] << ", ";
             ofs << JsonInput["Elevator"] << ", ";
             ofs << JsonInput["RunningTime"] << ", ";
             ofs << std::endl;
@@ -200,25 +202,33 @@ int android_main() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread http_thread = std::thread([]() {
-        bool prev_log_state = log_state;
-        httplib::Client cli("http://192.168.4.1");
+        httplib::Client cli_microcontroller("http://192.168.4.1"); // このアドレスは変える必要があると思う
+        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
+        const std::string PASSWORD = "LMAJjvOi";
+        uint8_t KEY[32];
+        uint8_t HMAC[32];
+        sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
+
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
-            httplib::Result res_data = cli.Get("/GetMeasurementData");
+            httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
             if (res_data) JsonString = res_data->body;
 #endif
             get_json_data();
 
-            // マイコンのSDカードにもログを記録させる
-            if (prev_log_state != log_state) {
-                const char* log_url;
-                if (log_state) log_url = "/LogStart";
-                else log_url = "/LogStop";
-                httplib::Result res_log = cli.Get(log_url);
-                res_log_body = res_log->body;
-                prev_log_state = log_state;
+#ifndef TEST_CASE
+            // HMAC認証符号を追加してサーバーにPOST
+            std::string hmac_base64;
+            hmac_sha256(KEY, sizeof(KEY), JsonString.data(), JsonString.size(), HMAC, sizeof(HMAC));
+            algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
+            httplib::Headers headers = { { "Authorization", hmac_base64 } };
+            auto res = cli_server.Post("/data/create/", headers, JsonString, "application/json");
+            if (res->body != "good") {
+                clsDx();
+                printfDx(res->body.c_str());
             }
+#endif
         }
     });
     http_thread.detach();

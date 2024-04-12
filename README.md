@@ -15,9 +15,9 @@
 * （24代電装班員）
 
 # 使用したライブラリ
-* [ＤＸライブラリ（描画系を楽に処理するため）](https://dxlib.xsrv.jp/index.html)
-* [Json for Modern C++（C++でJSONを扱うため）](https://github.com/nlohmann/json)
-* [cpp-httplib（C++でHTTP通信を行うため）](https://github.com/yhirose/cpp-httplib)
+* [ＤＸライブラリ（描画系）](https://dxlib.xsrv.jp/index.html)
+* [Json for Modern C++（JSON管理用）](https://github.com/nlohmann/json)
+* [cpp-httplib（HTTP通信用）](https://github.com/yhirose/cpp-httplib)
 
 # なにかあれば
 このリポジトリから連絡いただいても大丈夫ですが、班長の[Twitter](https://twitter.com/21km43)にDMを送ってくれるとすぐに対応できると思います。
