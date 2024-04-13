@@ -224,7 +224,8 @@ int android_main() {
             algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
             httplib::Headers headers = { { "Authorization", hmac_base64 } };
             auto res = cli_server.Post("/data/create/", headers, JsonString, "application/json");
-            if (res->body != "good") {
+
+            if (res->status == httplib::StatusCode::Created_201) {
                 clsDx();
                 printfDx(res->body.c_str());
             }
