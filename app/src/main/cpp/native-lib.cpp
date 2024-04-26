@@ -201,13 +201,9 @@ int android_main() {
     int bar_width = 50;
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
-    std::thread http_thread = std::thread([]() {
-        httplib::Client cli_microcontroller("http://192.168.4.1"); // このアドレスは変える必要があると思う
-        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
-        const std::string PASSWORD = "LMAJjvOi";
-        uint8_t KEY[32];
-        uint8_t HMAC[32];
-        sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
+
+    std::thread get_data_thread = std::thread([]() {
+        httplib::Client cli_microcontroller("http://192.168.4.1"); // このアドレスは変える。MDNSはAndroidでは使えない
 
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -216,8 +212,20 @@ int android_main() {
             if (res_data) JsonString = res_data->body;
 #endif
             get_json_data();
+        }
+    });
+    get_data_thread.detach();
 
-#ifndef TEST_CASE
+    std::thread post_data_thread = std::thread([]() {
+        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
+        const std::string PASSWORD = "LMAJjvOi";
+        uint8_t KEY[32];
+        uint8_t HMAC[32];
+        sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
+
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
             // HMAC認証符号を追加してサーバーにPOST
             std::string hmac_base64;
             hmac_sha256(KEY, sizeof(KEY), JsonString.data(), JsonString.size(), HMAC, sizeof(HMAC));
@@ -226,13 +234,14 @@ int android_main() {
             auto res = cli_server.Post("/data/create/", headers, JsonString, "application/json");
 
             if (res->status == httplib::StatusCode::Created_201) {
+
+            } else {
                 clsDx();
                 printfDx(res->body.c_str());
             }
-#endif
         }
     });
-    http_thread.detach();
+    post_data_thread.detach();
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
