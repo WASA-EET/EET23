@@ -45,27 +45,53 @@ static const double Y_SCALE[PLACE_MAX] = {-5050.0, -274500.0, -194000.0}; // Y�
 
 static int current_place = 0;
 
-std::string JsonString;
-nlohmann::json JsonInput;
+std::string JsonString_Sensor;
+std::string JsonString_Server;
+nlohmann::json JsonInput_Sensor;
+nlohmann::json JsonInput_Server;
 // 参考：https://qiita.com/yohm/items/0f389ba5c5de4e2df9cf
 
-std::vector<int> trajectory_x; //可変長ベクトル x成分
-std::vector<int> trajectory_y; //可変長ベクトル y成分
+// マイコンから収集したデータ
+std::vector<int> trajectory_x; // 可変長ベクトル x成分
+std::vector<int> trajectory_y; // 可変長ベクトル y成分
 static double roll = 0.0; // 左右の傾き
 static double pitch = 0.0; // 前後の傾き
 static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
 static double altitude = 0; // 高度（m）
-static int rpm = 0; // ペラ回転数（rpm/min）
+static int rpm = 0; // ペラ回転数（rpm）
 static int power = 0; // 出力（watt）
 static double latitude = 0.0; // 緯度
 static double longitude = 0.0; // 経度
+
+// サーバーから収集したデータ
+struct WIND {
+    // TODO: 各要素宣言
+};
+/*
+ * 風向・風速のJSON構造は以下の通りとする
+ * {
+ *   "data_num" : "データ数"
+ *   "records" [
+ *     {
+ *       "AID" : "風速計のID"
+ *       "Latitude" : "緯度"
+ *       "Longitude" : "経度"
+ *       "WindSpeed" : "風速"
+ *       "WindDirection" : "風向"
+ *     },
+ *     {
+ *     ...以降要素数だけ同じ構造のデータが並ぶ
+ *   ]
+ * }
+ * */
+// ref: https://github.com/nlohmann/json/issues/716
+std::vector<WIND> winds; // 風速・風向
 
 // 外部ストレージでアクセスできるのは「/storage/emulated/0/Android/data/[パッケージ名]/files/」に限られる
 static const std::string LOG_DIRECTORY = "/storage/emulated/0/Android/data/com.wasa.eet23/files/";
 static const std::string LOG_EXTENSION = ".csv";
 static bool log_state = false;
-static std::string res_log_body = "null";
 static std::ofstream ofs;
 
 std::string time_string() {
@@ -100,32 +126,32 @@ void start_log() {
     std::thread ofs_thread = std::thread([]() {
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            ofs << JsonInput["Year"] << "/";
-            ofs << JsonInput["Month"] << "/";
-            ofs << JsonInput["Day"] << ", ";
-            ofs << JsonInput["Hour"] << ":";
-            ofs << JsonInput["Minute"] << ":";
-            ofs << JsonInput["Second"] << ", ";
-            ofs << JsonInput["Latitude"] << ", ";
-            ofs << JsonInput["Longitude"] << ", ";
-            ofs << JsonInput["GPSAltitude"] << ", ";
-            ofs << JsonInput["GPSCourse"] << ", ";
-            ofs << JsonInput["GPSSpeed"] << ", ";
-            ofs << JsonInput["Roll"] << ", ";
-            ofs << JsonInput["Pitch"] << ", ";
-            ofs << JsonInput["Yaw"] << ", ";
-            ofs << JsonInput["Temperature"] << ", ";
-            ofs << JsonInput["Pressure"] << ", ";
-            ofs << JsonInput["GroundPressure"] << ", ";
-            ofs << JsonInput["DPSAltitude"] << ", ";
-            ofs << JsonInput["Altitude"] << ", ";
-            ofs << JsonInput["AirSpeed"] << ", ";
-            ofs << JsonInput["PropellerRotationSpeed"] << ", ";
-            ofs << JsonInput["Cadence"] << ", ";
-            ofs << JsonInput["Power"] << ", ";
-            ofs << JsonInput["Rudder"] << ", ";
-            ofs << JsonInput["Elevator"] << ", ";
-            ofs << JsonInput["RunningTime"] << ", ";
+            ofs << JsonInput_Sensor["Year"] << "/";
+            ofs << JsonInput_Sensor["Month"] << "/";
+            ofs << JsonInput_Sensor["Day"] << ", ";
+            ofs << JsonInput_Sensor["Hour"] << ":";
+            ofs << JsonInput_Sensor["Minute"] << ":";
+            ofs << JsonInput_Sensor["Second"] << ", ";
+            ofs << JsonInput_Sensor["Latitude"] << ", ";
+            ofs << JsonInput_Sensor["Longitude"] << ", ";
+            ofs << JsonInput_Sensor["GPSAltitude"] << ", ";
+            ofs << JsonInput_Sensor["GPSCourse"] << ", ";
+            ofs << JsonInput_Sensor["GPSSpeed"] << ", ";
+            ofs << JsonInput_Sensor["Roll"] << ", ";
+            ofs << JsonInput_Sensor["Pitch"] << ", ";
+            ofs << JsonInput_Sensor["Yaw"] << ", ";
+            ofs << JsonInput_Sensor["Temperature"] << ", ";
+            ofs << JsonInput_Sensor["Pressure"] << ", ";
+            ofs << JsonInput_Sensor["GroundPressure"] << ", ";
+            ofs << JsonInput_Sensor["DPSAltitude"] << ", ";
+            ofs << JsonInput_Sensor["Altitude"] << ", ";
+            ofs << JsonInput_Sensor["AirSpeed"] << ", ";
+            ofs << JsonInput_Sensor["PropellerRotationSpeed"] << ", ";
+            ofs << JsonInput_Sensor["Cadence"] << ", ";
+            ofs << JsonInput_Sensor["Power"] << ", ";
+            ofs << JsonInput_Sensor["Rudder"] << ", ";
+            ofs << JsonInput_Sensor["Elevator"] << ", ";
+            ofs << JsonInput_Sensor["RunningTime"] << ", ";
             ofs << std::endl;
         }
         log_state = false;
@@ -158,17 +184,23 @@ void get_json_data() {
 #else
     // 通信関係のこととかを色々書く
     try {
-        if (JsonString.empty())
+        if (JsonString_Sensor.empty())
             return;
-        JsonInput = nlohmann::json::parse(JsonString);
-        roll = JsonInput["Roll"];
-        pitch = JsonInput["Pitch"];
-        yaw = JsonInput["Yaw"];
-        speed = JsonInput["AirSpeed"];
-        altitude = JsonInput["Altitude"];
-        rpm = JsonInput["PropellerRotationSpeed"];
-        latitude = JsonInput["Latitude"];
-        longitude = JsonInput["Longitude"];
+        JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
+        roll = JsonInput_Sensor["Roll"];
+        pitch = JsonInput_Sensor["Pitch"];
+        yaw = JsonInput_Sensor["Yaw"];
+        speed = JsonInput_Sensor["AirSpeed"];
+        altitude = JsonInput_Sensor["Altitude"];
+        rpm = JsonInput_Sensor["PropellerRotationSpeed"];
+        latitude = JsonInput_Sensor["Latitude"];
+        longitude = JsonInput_Sensor["Longitude"];
+
+        if (JsonString_Server.empty())
+            return;
+        JsonInput_Server = nlohmann::json::parse(JsonString_Server);
+        // TODO: ベクトル長変更、データ代入
+
     }
     catch (nlohmann::json::exception &e) {
         // 文字列をJsonに変換できない場合に行う処理
@@ -202,21 +234,21 @@ int android_main() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
 
-    std::thread get_data_thread = std::thread([]() {
+    std::thread microcontroller_http_thread = std::thread([]() {
         httplib::Client cli_microcontroller("http://192.168.4.1"); // このアドレスは変える。MDNSはAndroidでは使えない
 
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
             httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
-            if (res_data) JsonString = res_data->body;
+            if (res_data) JsonString_Sensor = res_data->body;
 #endif
             get_json_data();
         }
     });
-    get_data_thread.detach();
+    microcontroller_http_thread.detach();
 
-    std::thread post_data_thread = std::thread([]() {
+    std::thread server_http_thread = std::thread([]() {
         httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
         const std::string PASSWORD = "LMAJjvOi";
         uint8_t KEY[32];
@@ -226,22 +258,29 @@ int android_main() {
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
+            // 風速・風向をサーバーから取得
+            httplib::Result res_data = cli_server.Get("/GetMeasurementData");
+            if (res_data) JsonString_Server = res_data->body;
+
             // HMAC認証符号を追加してサーバーにPOST
             std::string hmac_base64;
-            hmac_sha256(KEY, sizeof(KEY), JsonString.data(), JsonString.size(), HMAC, sizeof(HMAC));
+            hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC, sizeof(HMAC));
             algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
             httplib::Headers headers = { { "Authorization", hmac_base64 } };
-            auto res = cli_server.Post("/data/create/", headers, JsonString, "application/json");
+            auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor, "application/json");
 
             if (res->status == httplib::StatusCode::Created_201) {
+                // TODO: 右上塗りつぶしON
 
             } else {
+                // TODO: 塗りつぶしフラグOFF
+
                 clsDx();
                 printfDx(res->body.c_str());
             }
         }
     });
-    post_data_thread.detach();
+    server_http_thread.detach();
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
@@ -351,8 +390,8 @@ int android_main() {
             DrawBox(0, 0, bar_width, bar_width, 0xffffffff, true);
         }
 
-        // ログの記録要求に対するレスポンスを表示（めっちゃ小さく表示される）
-        DrawString(0, 0, res_log_body.c_str(), COLOR_BLACK);
+        // TODO: サーバーと通信できているかどうかの確認用に右上を塗りつぶす
+
     }
 
     // DXライブラリ終了処理
