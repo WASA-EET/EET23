@@ -259,7 +259,7 @@ int android_main() {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
             // 風速・風向をサーバーから取得
-            httplib::Result res_data = cli_server.Get("/GetMeasurementData");
+            httplib::Result res_data = cli_server.Get("/data/get");
             if (res_data) JsonString_Server = res_data->body;
 
             // HMAC認証符号を追加してサーバーにPOST
