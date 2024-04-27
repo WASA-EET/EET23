@@ -120,19 +120,14 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, RunningTime"
+            << "TimeStamp, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            // TODO: ここをTimeStampに変更
-            ofs << JsonInput_Sensor["Year"] << "/";
-            ofs << JsonInput_Sensor["Month"] << "/";
-            ofs << JsonInput_Sensor["Day"] << ", ";
-            ofs << JsonInput_Sensor["Hour"] << ":";
-            ofs << JsonInput_Sensor["Minute"] << ":";
-            ofs << JsonInput_Sensor["Second"] << ", ";
+            // TODO（マイコン側）: 時刻をTimeStampに変更
+            ofs << JsonInput_Sensor["TimeStamp"] << ", ";
             ofs << JsonInput_Sensor["Latitude"] << ", ";
             ofs << JsonInput_Sensor["Longitude"] << ", ";
             ofs << JsonInput_Sensor["GPSAltitude"] << ", ";
@@ -180,6 +175,8 @@ void get_json_data() {
     // longitude = 136.050708;
     latitude += 0.0001;
     longitude += 0.0008;
+
+    // TODO: テスト用の風速・風向・位置情報をJSONで用意する
 #else
     // 通信関係のこととかを色々書く
     try {
@@ -260,9 +257,6 @@ int android_main() {
             // 風速・風向をサーバーから取得
             httplib::Result res_data = cli_server.Get("/data/get");
             if (res_data) JsonString_Server = res_data->body;
-#else
-            // TODO: テスト用の風速・風向・位置情報をJSONで用意する
-            JsonString_Server = R"({"user_id": 123, "name": "Alice"})";;
 #endif
 
             // HMAC認証符号を追加してサーバーにPOST
