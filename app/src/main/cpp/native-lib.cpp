@@ -255,7 +255,7 @@ int android_main() {
 
 #ifndef TEST_CASE
             // 風速・風向をサーバーから取得
-            httplib::Result res_data = cli_server.Get("/data/get");
+            httplib::Result res_data = cli_server.Get("/data/LD");
             if (res_data) JsonString_Server = res_data->body;
 #endif
 
@@ -264,7 +264,7 @@ int android_main() {
             hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC, sizeof(HMAC));
             algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
             httplib::Headers headers = { { "Authorization", hmac_base64 } };
-            // POST側はJSONを横流し
+            // TODO: POST側はJSONを横流し？
             auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor, "application/json");
 
             if (res->status == httplib::StatusCode::Created_201) {
