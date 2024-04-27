@@ -120,12 +120,13 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Cadence, Power, Rudder, Elevator, RunningTime"
+            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // TODO: ここをTimeStampに変更
             ofs << JsonInput_Sensor["Year"] << "/";
             ofs << JsonInput_Sensor["Month"] << "/";
             ofs << JsonInput_Sensor["Day"] << ", ";
@@ -147,8 +148,6 @@ void start_log() {
             ofs << JsonInput_Sensor["Altitude"] << ", ";
             ofs << JsonInput_Sensor["AirSpeed"] << ", ";
             ofs << JsonInput_Sensor["PropellerRotationSpeed"] << ", ";
-            ofs << JsonInput_Sensor["Cadence"] << ", ";
-            ofs << JsonInput_Sensor["Power"] << ", ";
             ofs << JsonInput_Sensor["Rudder"] << ", ";
             ofs << JsonInput_Sensor["Elevator"] << ", ";
             ofs << JsonInput_Sensor["RunningTime"] << ", ";
@@ -243,7 +242,6 @@ int android_main() {
             httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
             if (res_data) JsonString_Sensor = res_data->body;
 #endif
-            get_json_data();
         }
     });
     microcontroller_http_thread.detach();
@@ -258,15 +256,21 @@ int android_main() {
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
+#ifndef TEST_CASE
             // 風速・風向をサーバーから取得
             httplib::Result res_data = cli_server.Get("/data/get");
             if (res_data) JsonString_Server = res_data->body;
+#else
+            // TODO: テスト用の風速・風向・位置情報をJSONで用意する
+            JsonString_Server = R"({"user_id": 123, "name": "Alice"})";;
+#endif
 
             // HMAC認証符号を追加してサーバーにPOST
             std::string hmac_base64;
             hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC, sizeof(HMAC));
             algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
             httplib::Headers headers = { { "Authorization", hmac_base64 } };
+            // POST側はJSONを横流し
             auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor, "application/json");
 
             if (res->status == httplib::StatusCode::Created_201) {
@@ -284,6 +288,9 @@ int android_main() {
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
+
+        // JsonをDeserialize
+        get_json_data();
 
         // 地図の表示
         DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map[current_place], false);
