@@ -109,26 +109,25 @@ void start_log() {
     std::thread ofs_thread = std::thread([]() {
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            // TODO（マイコン側）: 時刻をTimeStampに変更
             ofs << JsonInput_Sensor["TimeStamp"] << ", ";
-            ofs << JsonInput_Sensor["Latitude"] << ", ";
-            ofs << JsonInput_Sensor["Longitude"] << ", ";
-            ofs << JsonInput_Sensor["GPSAltitude"] << ", ";
-            ofs << JsonInput_Sensor["GPSCourse"] << ", ";
-            ofs << JsonInput_Sensor["GPSSpeed"] << ", ";
-            ofs << JsonInput_Sensor["Roll"] << ", ";
-            ofs << JsonInput_Sensor["Pitch"] << ", ";
-            ofs << JsonInput_Sensor["Yaw"] << ", ";
-            ofs << JsonInput_Sensor["Temperature"] << ", ";
-            ofs << JsonInput_Sensor["Pressure"] << ", ";
-            ofs << JsonInput_Sensor["GroundPressure"] << ", ";
-            ofs << JsonInput_Sensor["DPSAltitude"] << ", ";
-            ofs << JsonInput_Sensor["Altitude"] << ", ";
-            ofs << JsonInput_Sensor["AirSpeed"] << ", ";
-            ofs << JsonInput_Sensor["PropellerRotationSpeed"] << ", ";
-            ofs << JsonInput_Sensor["Rudder"] << ", ";
-            ofs << JsonInput_Sensor["Elevator"] << ", ";
-            ofs << JsonInput_Sensor["Trim"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Latitude"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Longitude"] << ", ";
+            ofs << JsonInput_Sensor["data"]["GPSAltitude"] << ", ";
+            ofs << JsonInput_Sensor["data"]["GPSCourse"] << ", ";
+            ofs << JsonInput_Sensor["data"]["GPSSpeed"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Roll"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Pitch"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Yaw"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Temperature"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Pressure"] << ", ";
+            ofs << JsonInput_Sensor["data"]["GroundPressure"] << ", ";
+            ofs << JsonInput_Sensor["data"]["DPSAltitude"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Altitude"] << ", ";
+            ofs << JsonInput_Sensor["data"]["AirSpeed"] << ", ";
+            ofs << JsonInput_Sensor["data"]["PropellerRotationSpeed"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Rudder"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Elevator"] << ", ";
+            ofs << JsonInput_Sensor["data"]["Trim"] << ", ";
             ofs << JsonInput_Sensor["RunningTime"] << ", ";
             ofs << std::endl;
         }
@@ -175,15 +174,15 @@ void get_json_data() {
     try {
         if (!JsonString_Sensor.empty()) {
             JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
-            roll = JsonInput_Sensor["Roll"];
-            pitch = JsonInput_Sensor["Pitch"];
-            yaw = JsonInput_Sensor["Yaw"];
-            speed = JsonInput_Sensor["AirSpeed"];
-            altitude = JsonInput_Sensor["Altitude"];
-            rpm = JsonInput_Sensor["PropellerRotationSpeed"];
-            latitude = JsonInput_Sensor["Latitude"];
-            longitude = JsonInput_Sensor["Longitude"];
-            trim = JsonInput_Sensor["Trim"];
+            roll = JsonInput_Sensor["data"]["Roll"];
+            pitch = JsonInput_Sensor["data"]["Pitch"];
+            yaw = JsonInput_Sensor["data"]["Yaw"];
+            speed = JsonInput_Sensor["data"]["AirSpeed"];
+            altitude = JsonInput_Sensor["data"]["Altitude"];
+            rpm = JsonInput_Sensor["data"]["PropellerRotationSpeed"];
+            latitude = JsonInput_Sensor["data"]["Latitude"];
+            longitude = JsonInput_Sensor["data"]["Longitude"];
+            trim = JsonInput_Sensor["data"]["Trim"];
         }
 
         if (!JsonString_Server.empty()) {
