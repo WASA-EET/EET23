@@ -244,7 +244,7 @@ int android_main() {
     microcontroller_http_thread.detach();
 
     std::thread server_http_thread = std::thread([]() {
-        httplib::Client cli_server("https://anemometer.staging.tyama.mydns.jp");
+        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
         const std::string PASSWORD = "LMAJjvOi";
         uint8_t KEY[32];
         uint8_t HMAC[32];
