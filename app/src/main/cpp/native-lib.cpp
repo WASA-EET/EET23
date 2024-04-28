@@ -11,6 +11,13 @@
  *  リポジトリ：https://github.com/WASA-EET/EET23
  */
 
+/**
+ * TODO
+ *   1. POST URL
+ *   2. IP Address
+ *   3. Json structure (MCU)
+ */
+
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
