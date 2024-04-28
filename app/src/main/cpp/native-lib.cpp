@@ -67,10 +67,10 @@ static double longitude = 0.0; // 経度
 
 // サーバーから収集したデータ
 struct WIND {
-    double WindSpeed;
-    double WindDirection;
-    double Latitude;
-    double Longitude;
+    std::string WindSpeed;
+    std::string WindDirection;
+    std::string Latitude;
+    std::string Longitude;
 };
 /*
  * 風向・風速のJSON構造は以下の通りとする
@@ -197,28 +197,29 @@ void get_json_data() {
 #else
     // 通信関係のこととかを色々書く
     try {
-        if (JsonString_Sensor.empty())
-            return;
-        JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
-        roll = JsonInput_Sensor["Roll"];
-        pitch = JsonInput_Sensor["Pitch"];
-        yaw = JsonInput_Sensor["Yaw"];
-        speed = JsonInput_Sensor["AirSpeed"];
-        altitude = JsonInput_Sensor["Altitude"];
-        rpm = JsonInput_Sensor["PropellerRotationSpeed"];
-        latitude = JsonInput_Sensor["Latitude"];
-        longitude = JsonInput_Sensor["Longitude"];
-        trim = JsonInput_Sensor["Trim"];
+        if (!JsonString_Sensor.empty())
+        {
+            JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
+            roll = JsonInput_Sensor["Roll"];
+            pitch = JsonInput_Sensor["Pitch"];
+            yaw = JsonInput_Sensor["Yaw"];
+            speed = JsonInput_Sensor["AirSpeed"];
+            altitude = JsonInput_Sensor["Altitude"];
+            rpm = JsonInput_Sensor["PropellerRotationSpeed"];
+            latitude = JsonInput_Sensor["Latitude"];
+            longitude = JsonInput_Sensor["Longitude"];
+            trim = JsonInput_Sensor["Trim"];
+        }
 
-        if (JsonString_Server.empty())
-            return;
-        JsonInput_Server = nlohmann::json::parse(JsonString_Server);
-        winds.resize(JsonInput_Server["size"]);
-        for (int i = 0; i < winds.size(); i++) {
-            winds[i].WindSpeed = JsonInput_Server["record"]["data"]["WindSpeed"];
-            winds[i].WindDirection = JsonInput_Server["record"]["data"]["WindDirection"];
-            winds[i].Longitude = JsonInput_Server["record"]["data"]["Longitude"];
-            winds[i].Latitude = JsonInput_Server["record"]["data"]["Latitude"];
+        if (!JsonString_Server.empty()) {
+            JsonInput_Server = nlohmann::json::parse(JsonString_Server);
+            winds.resize(JsonInput_Server["size"]);
+            for (int i = 0; i < winds.size(); i++) {
+                winds[i].WindSpeed = JsonInput_Server["records"][i]["data"]["WindSpeed"];
+                winds[i].WindDirection = JsonInput_Server["records"][i]["data"]["WindDirection"];
+                winds[i].Longitude = JsonInput_Server["records"][i]["data"]["Longitude"];
+                winds[i].Latitude = JsonInput_Server["records"][i]["data"]["Latitude"];
+            }
         }
 
     }
@@ -269,7 +270,7 @@ int android_main() {
     microcontroller_http_thread.detach();
 
     std::thread server_http_thread = std::thread([]() {
-        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
+        httplib::Client cli_server("118.158.236.40:8000");
         const std::string PASSWORD = "LMAJjvOi";
         uint8_t KEY[32];
         uint8_t HMAC[32];
@@ -280,10 +281,9 @@ int android_main() {
 
 #ifndef TEST_CASE
             // 風速・風向をサーバーから取得
-            httplib::Result res_data = cli_server.Get("/data/LD");
+            httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
             if (res_data) JsonString_Server = res_data->body;
 #endif
-
             // HMAC認証符号を追加してサーバーにPOST
             std::string hmac_base64;
             hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC, sizeof(HMAC));
@@ -372,12 +372,12 @@ int android_main() {
         }
 
         for (int i = 0; i < winds.size(); i++) {
-            x = (int) ((winds[i].Longitude - C_LON[current_place]) * X_SCALE[current_place]);
-            y = (int) ((winds[i].Latitude - C_LAT[current_place]) * Y_SCALE[current_place]);
+            x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) * X_SCALE[current_place]);
+            y = (int) ((std::stod(winds[i].Latitude) - C_LAT[current_place]) * Y_SCALE[current_place]);
             x += SCREEN_WIDTH / 2;
             y += SCREEN_HEIGHT / 2;
             GetGraphSize(image_plane, &w, &h);
-            DrawRotaGraph(x, y, winds[i].WindSpeed * 1.0, winds[i].WindDirection * M_PI / 180.0,
+            DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0, std::stod(winds[i].WindDirection) * M_PI / 180.0,
                           image_arrow, true);
         }
 
