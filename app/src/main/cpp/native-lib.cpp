@@ -16,6 +16,7 @@
  *   1. POST URL
  *   2. IP Address
  *   3. Json structure (MCU)
+ *   4. Trim (MCU)
  */
 
 // マイコンネットワークに接続しない場合のテスト用
