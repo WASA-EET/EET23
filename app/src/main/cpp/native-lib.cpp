@@ -24,11 +24,11 @@
 
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
-static const unsigned int COLOR_BLACK = GetColor(0x00, 0x00, 0x00);
-static const unsigned int COLOR_RED = GetColor(0xff, 0x4b, 0x00);
-static const unsigned int COLOR_YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
-static const unsigned int COLOR_YELLOW = GetColor(0xf2, 0xe7, 0x00);
-static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
+[[maybe_unused]] static const unsigned int COLOR_BLACK = GetColor(0x00, 0x00, 0x00);
+[[maybe_unused]] static const unsigned int COLOR_RED = GetColor(0xff, 0x4b, 0x00);
+[[maybe_unused]] static const unsigned int COLOR_YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
+[[maybe_unused]] static const unsigned int COLOR_YELLOW = GetColor(0xf2, 0xe7, 0x00);
+[[maybe_unused]] static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
 static const char *IMAGE_PLANE_PATH = "plane.png";
 static const char *IMAGE_ARROW_PATH = "arrow.png";
 static const double DEFAULT_PITCH = 0.0;
@@ -36,7 +36,7 @@ static const double DEFAULT_PITCH = 0.0;
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
 // Y座標の倍率=-3.5217×(2^MapBoxの倍率)
-enum {
+enum [[maybe_unused]] {
     PLACE_BIWAKO,
     PLACE_HUJIKAWA,
     PLACE_OOTONE,
@@ -214,7 +214,8 @@ void get_json_data() {
 #endif
 }
 
-int android_main() {
+// エントリーポイント、[[maybe_unused]]は警告抑制用
+[[maybe_unused]] int android_main() {
 
     // 画面の解像度、カラービットの設定
     SetGraphMode(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
