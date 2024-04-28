@@ -88,7 +88,8 @@ void start_log() {
     char time_string[] = "19700101000000";
     DATEDATA Date;
     GetDateTime(&Date);
-    sprintf(time_string, "%04d%02d%02d%02d%02d%02d", Date.Year, Date.Mon, Date.Day, Date.Hour, Date.Min, Date.Sec);
+    sprintf(time_string, "%04d%02d%02d%02d%02d%02d", Date.Year, Date.Mon, Date.Day, Date.Hour,
+            Date.Min, Date.Sec);
 
     std::string path = LOG_DIRECTORY + time_string + LOG_EXTENSION;
     // フォルダが存在しないとファイルを作成できないので予めフォルダは作っておくこと！
@@ -143,7 +144,6 @@ void stop_log() {
     log_state = false;
 }
 
-
 void get_json_data() {
 #ifdef TEST_CASE
     roll = 5;
@@ -173,8 +173,7 @@ void get_json_data() {
 #else
     // 通信関係のこととかを色々書く
     try {
-        if (!JsonString_Sensor.empty())
-        {
+        if (!JsonString_Sensor.empty()) {
             JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             roll = JsonInput_Sensor["Roll"];
             pitch = JsonInput_Sensor["Pitch"];
@@ -260,10 +259,12 @@ int android_main() {
 #endif
             // HMAC認証符号を追加してサーバーにPOST
             std::string hmac_base64;
-            hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC, sizeof(HMAC));
+            hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC,
+                        sizeof(HMAC));
             algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
-            httplib::Headers headers = { { "Authorization", hmac_base64 } };
-            auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor, "application/json");
+            httplib::Headers headers = {{"Authorization", hmac_base64}};
+            auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor,
+                                       "application/json");
         }
     });
     server_http_thread.detach();
@@ -346,15 +347,17 @@ int android_main() {
         }
 
         for (int i = 0; i < winds.size(); i++) {
-            x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) * X_SCALE[current_place]);
-            y = (int) ((std::stod(winds[i].Latitude) - C_LAT[current_place]) * Y_SCALE[current_place]);
+            x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) *
+                       X_SCALE[current_place]);
+            y = (int) ((std::stod(winds[i].Latitude) - C_LAT[current_place]) *
+                       Y_SCALE[current_place]);
             x += SCREEN_WIDTH / 2;
             y += SCREEN_HEIGHT / 2;
             GetGraphSize(image_plane, &w, &h);
-            DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0, std::stod(winds[i].WindDirection) * M_PI / 180.0,
+            DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0,
+                          std::stod(winds[i].WindDirection) * M_PI / 180.0,
                           image_arrow, true);
         }
-
 
         // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
         if (GetTouchInputNum() > 0)
