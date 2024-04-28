@@ -72,24 +72,7 @@ struct WIND {
     std::string Latitude;
     std::string Longitude;
 };
-/*
- * 風向・風速のJSON構造は以下の通りとする
- * {
- *   "size" : "データ数"
- *   "records" [
- *     {
- *       "AID" : "風速計のID"
- *       "Latitude" : "緯度"
- *       "Longitude" : "経度"
- *       "WindSpeed" : "風速"
- *       "WindDirection" : "風向"
- *     },
- *     {
- *     ...以降要素数だけ同じ構造のデータが並ぶ
- *   ]
- * }
- * */
-// ref: https://github.com/nlohmann/json/issues/716
+
 std::vector<WIND> winds; // 風速・風向
 
 // 外部ストレージでアクセスできるのは「/storage/emulated/0/Android/data/[パッケージ名]/files/」に限られる
@@ -98,21 +81,16 @@ static const std::string LOG_EXTENSION = ".csv";
 static bool log_state = false;
 static std::ofstream ofs;
 
-std::string time_string() {
-    DATEDATA Date;
-    GetDateTime(&Date);
-    return
-            std::to_string(Date.Year) + "_" +
-            std::to_string(Date.Mon) + "_" +
-            std::to_string(Date.Day) + "_" +
-            std::to_string(Date.Hour) + "_" +
-            std::to_string(Date.Min) + "_" +
-            std::to_string(Date.Sec);
-}
-
 // ログ保存用
 void start_log() {
-    std::string path = LOG_DIRECTORY + time_string() + LOG_EXTENSION;
+
+    // 時刻取得、文字列変換
+    char time_string[] = "19700101000000";
+    DATEDATA Date;
+    GetDateTime(&Date);
+    sprintf(time_string, "%04d%02d%02d%02d%02d%02d", Date.Year, Date.Mon, Date.Day, Date.Hour, Date.Min, Date.Sec);
+
+    std::string path = LOG_DIRECTORY + time_string + LOG_EXTENSION;
     // フォルダが存在しないとファイルを作成できないので予めフォルダは作っておくこと！
     // あと権限の設定もお忘れなく（これに関しては端末側で有効化する必要もある）
     ofs.open(path);
@@ -183,17 +161,15 @@ void get_json_data() {
 
     winds.resize(2);
 
-    winds[0].WindSpeed = 2;
-    winds[0].WindDirection = 123;
-    winds[0].Longitude = 136.175774;
-    winds[0].Latitude = 35.293717;
+    winds[0].WindSpeed = std::to_string(2);
+    winds[0].WindDirection = std::to_string(123);
+    winds[0].Longitude = std::to_string(136.175774);
+    winds[0].Latitude = std::to_string(35.293717);
 
-    winds[1].WindSpeed = 0.5;
-    winds[1].WindDirection = 321;
-    winds[1].Longitude = 136.085166;
-    winds[1].Latitude = 35.315548;
-
-
+    winds[1].WindSpeed = std::to_string(0.5);
+    winds[1].WindDirection = std::to_string(321);
+    winds[1].Longitude = std::to_string(136.085166);
+    winds[1].Latitude = std::to_string(35.315548);
 #else
     // 通信関係のこととかを色々書く
     try {
@@ -213,12 +189,12 @@ void get_json_data() {
 
         if (!JsonString_Server.empty()) {
             JsonInput_Server = nlohmann::json::parse(JsonString_Server);
-            winds.resize(JsonInput_Server["size"]);
+            winds.resize(JsonInput_Server.size());
             for (int i = 0; i < winds.size(); i++) {
-                winds[i].WindSpeed = JsonInput_Server["records"][i]["data"]["WindSpeed"];
-                winds[i].WindDirection = JsonInput_Server["records"][i]["data"]["WindDirection"];
-                winds[i].Longitude = JsonInput_Server["records"][i]["data"]["Longitude"];
-                winds[i].Latitude = JsonInput_Server["records"][i]["data"]["Latitude"];
+                winds[i].WindSpeed = JsonInput_Server[i]["data"]["WindSpeed"];
+                winds[i].WindDirection = JsonInput_Server[i]["data"]["WindDirection"];
+                winds[i].Longitude = JsonInput_Server[i]["data"]["Longitude"];
+                winds[i].Latitude = JsonInput_Server[i]["data"]["Latitude"];
             }
         }
 
@@ -255,10 +231,8 @@ int android_main() {
     int bar_width = 50;
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
-
     std::thread microcontroller_http_thread = std::thread([]() {
         httplib::Client cli_microcontroller("http://192.168.4.1"); // このアドレスは変える。MDNSはAndroidでは使えない
-
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
@@ -270,7 +244,7 @@ int android_main() {
     microcontroller_http_thread.detach();
 
     std::thread server_http_thread = std::thread([]() {
-        httplib::Client cli_server("118.158.236.40:8000");
+        httplib::Client cli_server("https://anemometer.staging.tyama.mydns.jp");
         const std::string PASSWORD = "LMAJjvOi";
         uint8_t KEY[32];
         uint8_t HMAC[32];
