@@ -12,7 +12,7 @@
  */
 
 /**
- * TODO
+ * TODO:
  *   1. POST URL
  *   2. IP Address
  *   3. Json structure (MCU)
