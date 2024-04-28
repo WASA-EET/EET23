@@ -22,6 +22,7 @@ static const unsigned int COLOR_YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
 static const unsigned int COLOR_YELLOW = GetColor(0xf2, 0xe7, 0x00);
 static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
 static const char *IMAGE_PLANE_PATH = "plane.png";
+static const char *IMAGE_ARROW_PATH = "arrow.png";
 static const double DEFAULT_PITCH = 0.0;
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
@@ -60,18 +61,21 @@ static double yaw = 0.0; // 方向
 static double speed = 0.0; // 対気速度
 static double altitude = 0; // 高度（m）
 static int rpm = 0; // ペラ回転数（rpm）
-static int power = 0; // 出力（watt）
+static int trim = 0; // トリム値
 static double latitude = 0.0; // 緯度
 static double longitude = 0.0; // 経度
 
 // サーバーから収集したデータ
 struct WIND {
-    // TODO: 各要素宣言
+    double WindSpeed;
+    double WindDirection;
+    double Latitude;
+    double Longitude;
 };
 /*
  * 風向・風速のJSON構造は以下の通りとする
  * {
- *   "data_num" : "データ数"
+ *   "size" : "データ数"
  *   "records" [
  *     {
  *       "AID" : "風速計のID"
@@ -120,7 +124,7 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "TimeStamp, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, RunningTime"
+            << "TimeStamp, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, Trim, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
@@ -145,6 +149,7 @@ void start_log() {
             ofs << JsonInput_Sensor["PropellerRotationSpeed"] << ", ";
             ofs << JsonInput_Sensor["Rudder"] << ", ";
             ofs << JsonInput_Sensor["Elevator"] << ", ";
+            ofs << JsonInput_Sensor["Trim"] << ", ";
             ofs << JsonInput_Sensor["RunningTime"] << ", ";
             ofs << std::endl;
         }
@@ -163,20 +168,32 @@ void stop_log() {
 
 void get_json_data() {
 #ifdef TEST_CASE
-    roll = GetRand(10) - 5;
-    pitch = GetRand(10) - 5;
-    yaw = GetRand(10) - 5;
-    speed = GetRand(10);
-    altitude = GetRand(1000);
-    rpm = GetRand(300);
+    roll = 5;
+    pitch = 1;
+    yaw = 3;
+    speed = 4;
+    altitude = 2.2;
+    rpm = 10;
 
     // 35.199357, 136.050708
     // latitude = 35.199357;
     // longitude = 136.050708;
-    latitude += 0.0001;
-    longitude += 0.0008;
+    //latitude += 0.0001;
+    //longitude += 0.0008;
 
-    // TODO: テスト用の風速・風向・位置情報をJSONで用意する
+    winds.resize(2);
+
+    winds[0].WindSpeed = 2;
+    winds[0].WindDirection = 123;
+    winds[0].Longitude = 136.175774;
+    winds[0].Latitude = 35.293717;
+
+    winds[1].WindSpeed = 0.5;
+    winds[1].WindDirection = 321;
+    winds[1].Longitude = 136.085166;
+    winds[1].Latitude = 35.315548;
+
+
 #else
     // 通信関係のこととかを色々書く
     try {
@@ -191,11 +208,18 @@ void get_json_data() {
         rpm = JsonInput_Sensor["PropellerRotationSpeed"];
         latitude = JsonInput_Sensor["Latitude"];
         longitude = JsonInput_Sensor["Longitude"];
+        trim = JsonInput_Sensor["Trim"];
 
         if (JsonString_Server.empty())
             return;
         JsonInput_Server = nlohmann::json::parse(JsonString_Server);
-        // TODO: ベクトル長変更、データ代入
+        winds.resize(JsonInput_Server["size"]);
+        for (int i = 0; i < winds.size(); i++) {
+            winds[i].WindSpeed = JsonInput_Server["record"]["data"]["WindSpeed"];
+            winds[i].WindDirection = JsonInput_Server["record"]["data"]["WindDirection"];
+            winds[i].Longitude = JsonInput_Server["record"]["data"]["Longitude"];
+            winds[i].Latitude = JsonInput_Server["record"]["data"]["Latitude"];
+        }
 
     }
     catch (nlohmann::json::exception &e) {
@@ -225,6 +249,7 @@ int android_main() {
         image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
     }
     int image_plane = LoadGraph(IMAGE_PLANE_PATH);
+    int image_arrow = LoadGraph(IMAGE_ARROW_PATH);
     int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
 
@@ -264,18 +289,7 @@ int android_main() {
             hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC, sizeof(HMAC));
             algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
             httplib::Headers headers = { { "Authorization", hmac_base64 } };
-            // TODO: POST側はJSONを横流し？
             auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor, "application/json");
-
-            if (res->status == httplib::StatusCode::Created_201) {
-                // TODO: 右上塗りつぶしON
-
-            } else {
-                // TODO: 塗りつぶしフラグOFF
-
-                clsDx();
-                printfDx(res->body.c_str());
-            }
         }
     });
     server_http_thread.detach();
@@ -300,9 +314,9 @@ int android_main() {
         wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
         DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
                                  GetColor(255, 255, 255), font, "%d", rpm);
-        wide = GetDrawFormatStringWidthToHandle(font, "%d", power);
+        wide = GetDrawFormatStringWidthToHandle(font, "%d", trim);
         DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
-                                 GetColor(255, 255, 255), font, "%d", power);
+                                 GetColor(255, 255, 255), font, "%d", trim);
 
         // ロールとピッチに応じて色を変える
         // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
@@ -357,6 +371,17 @@ int android_main() {
                      COLOR_RED, 5);
         }
 
+        for (int i = 0; i < winds.size(); i++) {
+            x = (int) ((winds[i].Longitude - C_LON[current_place]) * X_SCALE[current_place]);
+            y = (int) ((winds[i].Latitude - C_LAT[current_place]) * Y_SCALE[current_place]);
+            x += SCREEN_WIDTH / 2;
+            y += SCREEN_HEIGHT / 2;
+            GetGraphSize(image_plane, &w, &h);
+            DrawRotaGraph(x, y, winds[i].WindSpeed * 1.0, winds[i].WindDirection * M_PI / 180.0,
+                          image_arrow, true);
+        }
+
+
         // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
         if (GetTouchInputNum() > 0)
             touch_time++;
@@ -390,8 +415,6 @@ int android_main() {
         if (!log_state) {
             DrawBox(0, 0, bar_width, bar_width, 0xffffffff, true);
         }
-
-        // TODO: サーバーと通信できているかどうかの確認用に右上を塗りつぶす
 
     }
 
