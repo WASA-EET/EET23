@@ -238,7 +238,7 @@ void get_json_data() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread microcontroller_http_thread = std::thread([]() {
-        httplib::Client cli_microcontroller("http://192.168.4.1"); // このアドレスは変える。MDNSはAndroidでは使えない
+        httplib::Client cli_microcontroller("http://192.168.43.4"); // 計測マイコンのIPアドレス
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
