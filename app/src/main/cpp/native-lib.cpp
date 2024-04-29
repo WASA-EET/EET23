@@ -9,14 +9,7 @@
 
 /*
  *  リポジトリ：https://github.com/WASA-EET/EET23
- */
-
-/**
- * TODO:
- *   1. POST URL
- *   2. IP Address
- *   3. Json structure (MCU)
- *   4. Trim (MCU)
+ *  C++ Version ... C++20 （CMakeLists.txtでの設定が必須）
  */
 
 // マイコンネットワークに接続しない場合のテスト用
@@ -191,6 +184,12 @@ void get_json_data() {
             latitude = JsonInput_Sensor["data"]["Latitude"];
             longitude = JsonInput_Sensor["data"]["Longitude"];
             trim = JsonInput_Sensor["data"]["Trim"];
+
+            if (!log_state && JsonInput_Sensor["LOG"] == "ON") {
+                start_log();
+            } else if (log_state && JsonInput_Sensor["LOG"] == "OFF") {
+                stop_log();
+            }
         }
 
         if (!JsonString_Server.empty()) {
@@ -381,15 +380,8 @@ void get_json_data() {
                 trajectory_x.clear();
                 trajectory_y.clear();
             }
-            // 2本の場合はログの記録を開始（または停止）
+            // 2本の場合は地図の切り替え
             if (GetTouchInputNum() == 2) {
-                if (!log_state)
-                    start_log();
-                else
-                    stop_log();
-            }
-            // 3本の場合は地図の切り替え
-            if (GetTouchInputNum() == 3) {
                 current_place = (current_place + 1) % PLACE_MAX;
                 trajectory_x.clear();
                 trajectory_y.clear();
