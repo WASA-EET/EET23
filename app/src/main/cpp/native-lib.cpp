@@ -22,9 +22,11 @@ static const int SCREEN_HEIGHT = 2340;
 [[maybe_unused]] static const unsigned int COLOR_YELLOW_RED = GetColor(0xf6, 0xaa, 0x00);
 [[maybe_unused]] static const unsigned int COLOR_YELLOW = GetColor(0xf2, 0xe7, 0x00);
 [[maybe_unused]] static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
+[[maybe_unused]] static const unsigned int COLOR_WHITE = GetColor(0xff, 0xff, 0xff);
 static const char *IMAGE_PLANE_PATH = "plane.png";
 static const char *IMAGE_ARROW_PATH = "arrow.png";
-static const double DEFAULT_PITCH = 0.0;
+static const char *AUDIO_START_PATH = "start.wav";
+static const char *AUDIO_STOP_PATH = "stop.wav";
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
@@ -80,6 +82,8 @@ std::vector<WIND> winds; // 風速・風向
 static const std::string LOG_DIRECTORY = "/storage/emulated/0/Android/data/com.wasa.eet23/files/";
 static const std::string LOG_EXTENSION = ".csv";
 static bool log_state = false;
+static int log_count = 0;
+static const int LOG_START_STOP_MARK_TIME = 60;
 static std::ofstream ofs;
 
 // ログ保存用
@@ -133,15 +137,18 @@ void start_log() {
             ofs << std::endl;
         }
         log_state = false;
+        log_count = LOG_START_STOP_MARK_TIME;
     });
     ofs_thread.detach();
 
     log_state = true;
+    log_count = LOG_START_STOP_MARK_TIME;
 }
 
 void stop_log() {
     ofs.close();
     log_state = false;
+    log_count = LOG_START_STOP_MARK_TIME;
 }
 
 void get_json_data() {
@@ -233,6 +240,9 @@ void get_json_data() {
     }
     int image_plane = LoadGraph(IMAGE_PLANE_PATH);
     int image_arrow = LoadGraph(IMAGE_ARROW_PATH);
+    int audio_start = LoadSoundMem(AUDIO_START_PATH);
+    int audio_stop = LoadSoundMem(AUDIO_STOP_PATH);
+
     int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
 
@@ -303,13 +313,13 @@ void get_json_data() {
         // ロールとピッチに応じて色を変える
         // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
         unsigned int color_top, color_bottom, color_left, color_right;
-        if (pitch - DEFAULT_PITCH > 3.0) { color_top = COLOR_RED; }
-        else if (pitch - DEFAULT_PITCH > 2.0) { color_top = COLOR_YELLOW_RED; }
-        else if (pitch - DEFAULT_PITCH > 1.0) { color_top = COLOR_YELLOW; }
+        if (pitch > 3.0) { color_top = COLOR_RED; }
+        else if (pitch > 2.0) { color_top = COLOR_YELLOW_RED; }
+        else if (pitch > 1.0) { color_top = COLOR_YELLOW; }
         else { color_top = COLOR_GREEN; }
-        if (pitch - DEFAULT_PITCH < -3.0) { color_bottom = COLOR_RED; }
-        else if (pitch - DEFAULT_PITCH < -2.0) { color_bottom = COLOR_YELLOW_RED; }
-        else if (pitch - DEFAULT_PITCH < -1.0) { color_bottom = COLOR_YELLOW; }
+        if (pitch < -3.0) { color_bottom = COLOR_RED; }
+        else if (pitch < -2.0) { color_bottom = COLOR_YELLOW_RED; }
+        else if (pitch < -1.0) { color_bottom = COLOR_YELLOW; }
         else { color_bottom = COLOR_GREEN; }
         if (roll > 3.0) { color_right = COLOR_RED; }
         else if (roll > 2.0) { color_right = COLOR_YELLOW_RED; }
@@ -380,8 +390,15 @@ void get_json_data() {
                 trajectory_x.clear();
                 trajectory_y.clear();
             }
-            // 2本の場合は地図の切り替え
+            // 2本なら軌跡を削除
             if (GetTouchInputNum() == 2) {
+                if (!log_state)
+                    start_log();
+                else
+                    stop_log();
+            }
+            // 3本の場合は地図の切り替え
+            if (GetTouchInputNum() == 3) {
                 current_place = (current_place + 1) % PLACE_MAX;
                 trajectory_x.clear();
                 trajectory_y.clear();
@@ -390,7 +407,32 @@ void get_json_data() {
 
         // ログを収集していなければ左上に四角を描画
         if (!log_state) {
-            DrawBox(0, 0, bar_width, bar_width, 0xffffffff, true);
+            DrawBox(0, 0, bar_width, bar_width, COLOR_WHITE, true);
+        }
+
+        // スタート・ストップ時に三角形または四角形を描画し、音を再生
+        const static int START_STOP_ICON_WIDTH = 480;
+        if (log_count > 0) {
+            if (log_state) {
+                if (log_count == LOG_START_STOP_MARK_TIME) {
+                    PlaySoundMem(audio_start, DX_PLAYTYPE_BACK);
+                }
+                DrawTriangleAA(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
+                        SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
+                        SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
+                        SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2,
+                        SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
+                        SCREEN_HEIGHT / 2, COLOR_GREEN, true);
+            } else {
+                if (log_count == LOG_START_STOP_MARK_TIME) {
+                    PlaySoundMem(audio_stop, DX_PLAYTYPE_BACK);
+                }
+                DrawBox(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
+                        SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
+                        SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
+                        SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2, COLOR_RED, true);
+            }
+            log_count--;
         }
 
     }
