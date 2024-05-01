@@ -390,7 +390,7 @@ void get_json_data() {
                 trajectory_x.clear();
                 trajectory_y.clear();
             }
-            // 2本なら軌跡を削除
+            // 2本ならログの記録を開始（または終了）
             if (GetTouchInputNum() == 2) {
                 if (!log_state)
                     start_log();
