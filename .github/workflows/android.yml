@@ -9,7 +9,6 @@ jobs:
   build:
 
     name: Build apk
-
     runs-on: ubuntu-latest
 
     steps:
@@ -20,14 +19,13 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '18'
-      - name: add permission
-        run: chmod +x ./gradlew
+          cache: 'gradle'
       - name: Run Android Lint
-        run: ./gradlew lintDebug
-      - name: Run Unit Test
-        run: ./gradlew testDebug
-      - name: Build with Gradle
-        run: ./gradlew assembleDebug
+        run:
+          chmod +x ./gradlew
+          ./gradlew lintDebug
+          ./gradlew testDebug
+          ./gradlew assembleDebug
       - name: Upload apk file
         uses: actions/upload-artifact@v1
         with:
