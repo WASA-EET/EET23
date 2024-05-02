@@ -11,22 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: setup JDK
+      - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '18'
           cache: 'gradle'
-      - name: Run Android Lint
+      - name: Run gradlew
         run: 
           chmod +x ./gradlew &&
           ./gradlew lintDebug &&
           ./gradlew testDebug &&
           ./gradlew assembleDebug
-      - name: Upload apk file
-        uses: actions/upload-artifact@v1
+      - name: Upload apk
+        uses: actions/upload-artifact@v4
         with:
           name: apk
           path: app/build/outputs/apk/debug/app-debug.apk
