@@ -16,8 +16,8 @@ project("eet23")
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
-include_directories( C:/Lib_Android/${ANDROID_ABI} )
-link_directories( C:/Lib_Android/${ANDROID_ABI} )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR} PUBLIC Lib_Android/${ANDROID_ABI} )
+link_directories( ${CMAKE_CURRENT_SOURCE_DIR} PUBLIC Lib_Android/${ANDROID_ABI} )
 
 add_library( # Sets the name of the library.
         native-lib
