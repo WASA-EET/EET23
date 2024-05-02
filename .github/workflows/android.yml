@@ -13,12 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: setup JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 1.8
+          distribution: 'zulu'
+          java-version: '11'
       - name: Run Android Lint
         run: ./gradlew lintDebug
       - name: Run Unit Test
