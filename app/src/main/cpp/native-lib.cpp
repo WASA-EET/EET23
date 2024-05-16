@@ -15,6 +15,8 @@
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
+static const std::string PLANE_AID = "7777";
+
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
 [[maybe_unused]] static const unsigned int COLOR_BLACK = GetColor(0x00, 0x00, 0x00);
@@ -108,13 +110,13 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "TimeStamp, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, Trim, RunningTime"
+            << "Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, Trim, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
         while (ofs) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            ofs << JsonInput_Sensor["TimeStamp"] << ", ";
+            ofs << JsonInput_Sensor["Time"] << ", ";
             ofs << JsonInput_Sensor["data"]["Latitude"] << ", ";
             ofs << JsonInput_Sensor["data"]["Longitude"] << ", ";
             ofs << JsonInput_Sensor["data"]["GPSAltitude"] << ", ";
@@ -202,11 +204,19 @@ void get_json_data() {
         if (!JsonString_Server.empty()) {
             JsonInput_Server = nlohmann::json::parse(JsonString_Server);
             winds.resize(JsonInput_Server.size());
+            int plane_index = -1;
             for (int i = 0; i < winds.size(); i++) {
+                if (JsonInput_Server[i]["AID"] == PLANE_AID) {
+                    plane_index = i;
+                    continue;
+                }
                 winds[i].WindSpeed = JsonInput_Server[i]["data"]["WindSpeed"];
                 winds[i].WindDirection = JsonInput_Server[i]["data"]["WindDirection"];
                 winds[i].Longitude = JsonInput_Server[i]["data"]["Longitude"];
                 winds[i].Latitude = JsonInput_Server[i]["data"]["Latitude"];
+            }
+            if (plane_index != -1) {
+                winds.erase(winds.begin() + plane_index);
             }
         }
 
@@ -217,6 +227,7 @@ void get_json_data() {
         clsDx();
         printfDx(e.what());
     }
+    catch (...) { }
 #endif
 }
 
