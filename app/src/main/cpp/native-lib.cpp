@@ -227,7 +227,9 @@ void get_json_data() {
         clsDx();
         printfDx(e.what());
     }
-    catch (...) { }
+    catch (...) {
+        // catch all exception
+    }
 #endif
 }
 
@@ -278,21 +280,27 @@ void get_json_data() {
         sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
 
         while (true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            try {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 #ifndef TEST_CASE
-            // 風速・風向をサーバーから取得
-            httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
-            if (res_data) JsonString_Server = res_data->body;
+                // 風速・風向をサーバーから取得
+                httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
+                if (res_data) JsonString_Server = res_data->body;
 #endif
-            // HMAC認証符号を追加してサーバーにPOST
-            std::string hmac_base64;
-            hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(), HMAC,
-                        sizeof(HMAC));
-            algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)), hmac_base64);
-            httplib::Headers headers = {{"Authorization", hmac_base64}};
-            auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor,
-                                       "application/json");
+                // HMAC認証符号を追加してサーバーにPOST
+                std::string hmac_base64;
+                hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(),
+                            HMAC,
+                            sizeof(HMAC));
+                algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)),
+                                         hmac_base64);
+                httplib::Headers headers = {{"Authorization", hmac_base64}};
+                auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor,
+                                           "application/json");
+            } catch (...) {
+                // catch all exception
+            }
         }
     });
     server_http_thread.detach();
@@ -300,152 +308,155 @@ void get_json_data() {
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
 
-        // JsonをDeserialize
-        get_json_data();
+        try {
+            // JsonをDeserialize
+            get_json_data();
 
-        // 地図の表示
-        DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map[current_place], false);
+            // 地図の表示
+            DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, image_map[current_place], false);
 
-        // 数値の表示
-        int wide;
-        wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
-                                 GetColor(255, 255, 255), font, "%.1f", speed);
-        wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
-                                 GetColor(255, 255, 255), font, "%.2f", altitude);
-        wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
-                                 GetColor(255, 255, 255), font, "%d", rpm);
-        wide = GetDrawFormatStringWidthToHandle(font, "%d", trim);
-        DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
-                                 GetColor(255, 255, 255), font, "%d", trim);
+            // 数値の表示
+            int wide;
+            wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
+                                     GetColor(255, 255, 255), font, "%.1f", speed);
+            wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
+                                     GetColor(255, 255, 255), font, "%.2f", altitude);
+            wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
+                                     GetColor(255, 255, 255), font, "%d", rpm);
+            wide = GetDrawFormatStringWidthToHandle(font, "%d", trim);
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
+                                     GetColor(255, 255, 255), font, "%d", trim);
 
-        // ロールとピッチに応じて色を変える
-        // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
-        unsigned int color_top, color_bottom, color_left, color_right;
-        if (pitch > 3.0) { color_top = COLOR_RED; }
-        else if (pitch > 2.0) { color_top = COLOR_YELLOW_RED; }
-        else if (pitch > 1.0) { color_top = COLOR_YELLOW; }
-        else { color_top = COLOR_GREEN; }
-        if (pitch < -3.0) { color_bottom = COLOR_RED; }
-        else if (pitch < -2.0) { color_bottom = COLOR_YELLOW_RED; }
-        else if (pitch < -1.0) { color_bottom = COLOR_YELLOW; }
-        else { color_bottom = COLOR_GREEN; }
-        if (roll > 3.0) { color_right = COLOR_RED; }
-        else if (roll > 2.0) { color_right = COLOR_YELLOW_RED; }
-        else if (roll > 1.0) { color_right = COLOR_YELLOW; }
-        else { color_right = COLOR_GREEN; }
-        if (roll < -3.0) { color_left = COLOR_RED; }
-        else if (roll < -2.0) { color_left = COLOR_YELLOW_RED; }
-        else if (roll < -1.0) { color_left = COLOR_YELLOW; }
-        else { color_left = COLOR_GREEN; }
+            // ロールとピッチに応じて色を変える
+            // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
+            unsigned int color_top, color_bottom, color_left, color_right;
+            if (pitch > 3.0) { color_top = COLOR_RED; }
+            else if (pitch > 2.0) { color_top = COLOR_YELLOW_RED; }
+            else if (pitch > 1.0) { color_top = COLOR_YELLOW; }
+            else { color_top = COLOR_GREEN; }
+            if (pitch < -3.0) { color_bottom = COLOR_RED; }
+            else if (pitch < -2.0) { color_bottom = COLOR_YELLOW_RED; }
+            else if (pitch < -1.0) { color_bottom = COLOR_YELLOW; }
+            else { color_bottom = COLOR_GREEN; }
+            if (roll > 3.0) { color_right = COLOR_RED; }
+            else if (roll > 2.0) { color_right = COLOR_YELLOW_RED; }
+            else if (roll > 1.0) { color_right = COLOR_YELLOW; }
+            else { color_right = COLOR_GREEN; }
+            if (roll < -3.0) { color_left = COLOR_RED; }
+            else if (roll < -2.0) { color_left = COLOR_YELLOW_RED; }
+            else if (roll < -1.0) { color_left = COLOR_YELLOW; }
+            else { color_left = COLOR_GREEN; }
 
-        // 描画
-        DrawBox(0, 0, SCREEN_WIDTH, bar_width, color_top, true);
-        DrawBox(0, 0, bar_width, SCREEN_HEIGHT, color_left, true);
-        DrawBox(0, SCREEN_HEIGHT - bar_width, SCREEN_WIDTH, SCREEN_HEIGHT, color_bottom, true);
-        DrawBox(SCREEN_WIDTH - bar_width, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color_right, true);
+            // 描画
+            DrawBox(0, 0, SCREEN_WIDTH, bar_width, color_top, true);
+            DrawBox(0, 0, bar_width, SCREEN_HEIGHT, color_left, true);
+            DrawBox(0, SCREEN_HEIGHT - bar_width, SCREEN_WIDTH, SCREEN_HEIGHT, color_bottom, true);
+            DrawBox(SCREEN_WIDTH - bar_width, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color_right, true);
 
-        // 緯度経度をピクセルの座標に変換する
-        int x = (int) ((longitude - C_LON[current_place]) * X_SCALE[current_place]);
-        int y = (int) ((latitude - C_LAT[current_place]) * Y_SCALE[current_place]);
-        x += SCREEN_WIDTH / 2;
-        y += SCREEN_HEIGHT / 2;
-
-        // 現在地に矢印を表示
-        int w, h;
-        GetGraphSize(image_plane, &w, &h);
-        DrawRotaGraph(x, y, 0.3, yaw, image_plane, true);
-        // DrawCircle(x, y, 5, RED);
-
-        // 軌跡の追加
-        if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
-            if (trajectory_x.empty() || trajectory_y.empty() || trajectory_x.back() != x ||
-                trajectory_y.back() != y) {
-                trajectory_x.push_back(x);
-                trajectory_y.push_back(y);
-            }
-        }
-
-        // 軌跡の描画
-        for (int i = 1; i < trajectory_x.size(); i++) {
-            DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
-                     COLOR_RED, 5);
-        }
-
-        for (int i = 0; i < winds.size(); i++) {
-            x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) *
-                       X_SCALE[current_place]);
-            y = (int) ((std::stod(winds[i].Latitude) - C_LAT[current_place]) *
-                       Y_SCALE[current_place]);
+            // 緯度経度をピクセルの座標に変換する
+            int x = (int) ((longitude - C_LON[current_place]) * X_SCALE[current_place]);
+            int y = (int) ((latitude - C_LAT[current_place]) * Y_SCALE[current_place]);
             x += SCREEN_WIDTH / 2;
             y += SCREEN_HEIGHT / 2;
+
+            // 現在地に矢印を表示
+            int w, h;
             GetGraphSize(image_plane, &w, &h);
-            DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0,
-                          std::stod(winds[i].WindDirection) * M_PI / 180.0,
-                          image_arrow, true);
-        }
+            DrawRotaGraph(x, y, 0.3, yaw, image_plane, true);
+            // DrawCircle(x, y, 5, RED);
 
-        // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
-        if (GetTouchInputNum() > 0)
-            touch_time++;
-        else
-            touch_time = 0;
-
-        // 1秒以上連続2本以上の指で画面に触れたら
-        if (touch_time > 60) {
-            touch_time = 0;
-            // 1本なら軌跡を削除
-            if (GetTouchInputNum() == 1) {
-                trajectory_x.clear();
-                trajectory_y.clear();
-            }
-            // 2本ならログの記録を開始（または終了）
-            if (GetTouchInputNum() == 2) {
-                if (!log_state)
-                    start_log();
-                else
-                    stop_log();
-            }
-            // 3本の場合は地図の切り替え
-            if (GetTouchInputNum() == 3) {
-                current_place = (current_place + 1) % PLACE_MAX;
-                trajectory_x.clear();
-                trajectory_y.clear();
-            }
-        }
-
-        // ログを収集していなければ左上に四角を描画
-        if (!log_state) {
-            DrawBox(0, 0, bar_width, bar_width, COLOR_WHITE, true);
-        }
-
-        // スタート・ストップ時に三角形または四角形を描画し、音を再生
-        const static int START_STOP_ICON_WIDTH = 480;
-        if (log_count > 0) {
-            if (log_state) {
-                if (log_count == LOG_START_STOP_MARK_TIME) {
-                    PlaySoundMem(audio_start, DX_PLAYTYPE_BACK);
+            // 軌跡の追加
+            if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
+                if (trajectory_x.empty() || trajectory_y.empty() || trajectory_x.back() != x ||
+                    trajectory_y.back() != y) {
+                    trajectory_x.push_back(x);
+                    trajectory_y.push_back(y);
                 }
-                DrawTriangleAA(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
-                        SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
-                        SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
-                        SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2,
-                        SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
-                        SCREEN_HEIGHT / 2, COLOR_GREEN, true);
-            } else {
-                if (log_count == LOG_START_STOP_MARK_TIME) {
-                    PlaySoundMem(audio_stop, DX_PLAYTYPE_BACK);
-                }
-                DrawBox(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
-                        SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
-                        SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
-                        SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2, COLOR_RED, true);
             }
-            log_count--;
-        }
 
+            // 軌跡の描画
+            for (int i = 1; i < trajectory_x.size(); i++) {
+                DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
+                         COLOR_RED, 5);
+            }
+
+            for (int i = 0; i < winds.size(); i++) {
+                x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) *
+                           X_SCALE[current_place]);
+                y = (int) ((std::stod(winds[i].Latitude) - C_LAT[current_place]) *
+                           Y_SCALE[current_place]);
+                x += SCREEN_WIDTH / 2;
+                y += SCREEN_HEIGHT / 2;
+                GetGraphSize(image_plane, &w, &h);
+                DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0,
+                              std::stod(winds[i].WindDirection) * M_PI / 180.0,
+                              image_arrow, true);
+            }
+
+            // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
+            if (GetTouchInputNum() > 0)
+                touch_time++;
+            else
+                touch_time = 0;
+
+            // 1秒以上連続2本以上の指で画面に触れたら
+            if (touch_time > 60) {
+                touch_time = 0;
+                // 1本なら軌跡を削除
+                if (GetTouchInputNum() == 1) {
+                    trajectory_x.clear();
+                    trajectory_y.clear();
+                }
+                // 2本ならログの記録を開始（または終了）
+                if (GetTouchInputNum() == 2) {
+                    if (!log_state)
+                        start_log();
+                    else
+                        stop_log();
+                }
+                // 3本の場合は地図の切り替え
+                if (GetTouchInputNum() == 3) {
+                    current_place = (current_place + 1) % PLACE_MAX;
+                    trajectory_x.clear();
+                    trajectory_y.clear();
+                }
+            }
+
+            // ログを収集していなければ左上に四角を描画
+            if (!log_state) {
+                DrawBox(0, 0, bar_width, bar_width, COLOR_WHITE, true);
+            }
+
+            // スタート・ストップ時に三角形または四角形を描画し、音を再生
+            const static int START_STOP_ICON_WIDTH = 480;
+            if (log_count > 0) {
+                if (log_state) {
+                    if (log_count == LOG_START_STOP_MARK_TIME) {
+                        PlaySoundMem(audio_start, DX_PLAYTYPE_BACK);
+                    }
+                    DrawTriangleAA(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
+                                   SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
+                                   SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
+                                   SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2,
+                                   SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
+                                   SCREEN_HEIGHT / 2, COLOR_GREEN, true);
+                } else {
+                    if (log_count == LOG_START_STOP_MARK_TIME) {
+                        PlaySoundMem(audio_stop, DX_PLAYTYPE_BACK);
+                    }
+                    DrawBox(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
+                            SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
+                            SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
+                            SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2, COLOR_RED, true);
+                }
+                log_count--;
+            }
+        } catch (...) {
+            // catch all exception
+        }
     }
 
     // DXライブラリ終了処理
