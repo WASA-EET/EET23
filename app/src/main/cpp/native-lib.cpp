@@ -309,6 +309,8 @@ void get_json_data() {
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
 
         try {
+            printfDx("%s\n", JsonString_Sensor.c_str());
+            
             // JsonをDeserialize
             get_json_data();
 
