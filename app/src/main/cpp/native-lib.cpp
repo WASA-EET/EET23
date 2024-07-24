@@ -141,28 +141,32 @@ void start_log() {
 
     std::thread ofs_thread = std::thread([]() {
         while (ofs) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            ofs << JsonInput_Sensor["Time"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Latitude"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Longitude"] << ", ";
-            ofs << JsonInput_Sensor["data"]["GPSAltitude"] << ", ";
-            ofs << JsonInput_Sensor["data"]["GPSCourse"] << ", ";
-            ofs << JsonInput_Sensor["data"]["GPSSpeed"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Roll"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Pitch"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Yaw"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Temperature"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Pressure"] << ", ";
-            ofs << JsonInput_Sensor["data"]["GroundPressure"] << ", ";
-            ofs << JsonInput_Sensor["data"]["DPSAltitude"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Altitude"] << ", ";
-            ofs << JsonInput_Sensor["data"]["AirSpeed"] << ", ";
-            ofs << JsonInput_Sensor["data"]["PropellerRotationSpeed"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Rudder"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Elevator"] << ", ";
-            ofs << JsonInput_Sensor["data"]["Trim"] << ", ";
-            ofs << JsonInput_Sensor["RunningTime"] << ", ";
-            ofs << std::endl;
+            try {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                ofs << JsonInput_Sensor["Time"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Latitude"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Longitude"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GPSAltitude"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GPSCourse"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GPSSpeed"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Roll"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Pitch"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Yaw"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Temperature"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Pressure"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GroundPressure"] << ", ";
+                ofs << JsonInput_Sensor["data"]["DPSAltitude"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Altitude"] << ", ";
+                ofs << JsonInput_Sensor["data"]["AirSpeed"] << ", ";
+                ofs << JsonInput_Sensor["data"]["PropellerRotationSpeed"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Rudder"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Elevator"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Trim"] << ", ";
+                ofs << JsonInput_Sensor["RunningTime"] << ", ";
+                ofs << std::endl;
+            } catch (...) {
+                // catch all exception
+            }
         }
         log_state = false;
         log_count = LOG_START_STOP_MARK_TIME;
@@ -291,11 +295,15 @@ void get_json_data() {
     std::thread microcontroller_http_thread = std::thread([]() {
         httplib::Client cli_microcontroller("http://192.168.43.4"); // 計測マイコンのIPアドレス
         while (true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            try {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
-            httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
-            if (res_data) JsonString_Sensor = res_data->body;
+                httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
+                if (res_data) JsonString_Sensor = res_data->body;
 #endif
+            } catch (...) {
+                // catch all exception
+            }
         }
     });
     microcontroller_http_thread.detach();
@@ -310,7 +318,7 @@ void get_json_data() {
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
+#if 1
 #ifndef TEST_CASE
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
@@ -326,6 +334,7 @@ void get_json_data() {
                 httplib::Headers headers = {{"Authorization", hmac_base64}};
                 auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor,
                                            "application/json");
+#endif
             } catch (...) {
                 // catch all exception
             }
