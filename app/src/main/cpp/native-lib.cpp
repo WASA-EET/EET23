@@ -25,10 +25,14 @@ static const int SCREEN_HEIGHT = 2340;
 [[maybe_unused]] static const unsigned int COLOR_YELLOW = GetColor(0xf2, 0xe7, 0x00);
 [[maybe_unused]] static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
 [[maybe_unused]] static const unsigned int COLOR_WHITE = GetColor(0xff, 0xff, 0xff);
-static const char *IMAGE_PLANE_PATH = "plane.png";
+static const char *IMAGE_CURRENT_PATH = "current.png";
 static const char *IMAGE_ARROW_PATH = "arrow.png";
 static const char *AUDIO_START_PATH = "start.wav";
 static const char *AUDIO_STOP_PATH = "stop.wav";
+static const char *AUDIO_WARNING_PATH = "warning.wav";
+
+static const double START_POINT[2] = {136.254344, 35.294230};
+static const double TURNING_POINT[2][2] = {{136.124324, 35.416626}, {136.063712, 35.250789}};
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
@@ -63,12 +67,14 @@ std::vector<int> trajectory_y; // 可変長ベクトル y成分
 static double roll = 0.0; // 左右の傾き
 static double pitch = 0.0; // 前後の傾き
 static double yaw = 0.0; // 方向
+static double gpsCourse = 0.0; // GPSの方向
 static double speed = 0.0; // 対気速度
 static double altitude = 0; // 高度（m）
 static int rpm = 0; // ペラ回転数（rpm）
 static int trim = 0; // トリム値
 static double latitude = 0.0; // 緯度
 static double longitude = 0.0; // 経度
+static int distance = 0.0; // プラットホームからの距離
 
 // サーバーから収集したデータ
 struct WIND {
@@ -87,6 +93,26 @@ static bool log_state = false;
 static int log_count = 0;
 static const int LOG_START_STOP_MARK_TIME = 60;
 static std::ofstream ofs;
+
+double EARTH_RAD = 6378.137; // km
+
+double deg2rad(double deg) {
+    return deg * M_PI / 180.0;
+}
+
+double cal_distance(double x1, double y1, double x2, double y2) {
+    /*
+      pointA(lng x1, lat y1), pointB(lng x2, lat y2)
+      D = Rcos^-1(siny1siny2 + cosy1cosy2cosΔx)
+      Δx = x2 - x1
+      R = 6378.137[km]
+    */
+    x1 = deg2rad(x1);
+    x2 = deg2rad(x2);
+    y1 = deg2rad(y1);
+    y2 = deg2rad(y2);
+    return EARTH_RAD * acos(sin(y1) * sin(y2) + cos(y1) * cos(y2) * cos(x2 - x1));
+}
 
 // ログ保存用
 void start_log() {
@@ -187,6 +213,7 @@ void get_json_data() {
             roll = JsonInput_Sensor["data"]["Roll"];
             pitch = JsonInput_Sensor["data"]["Pitch"];
             yaw = JsonInput_Sensor["data"]["Yaw"];
+            gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
             speed = JsonInput_Sensor["data"]["AirSpeed"];
             altitude = JsonInput_Sensor["data"]["Altitude"];
             rpm = JsonInput_Sensor["data"]["PropellerRotationSpeed"];
@@ -246,15 +273,16 @@ void get_json_data() {
     SetDrawScreen(DX_SCREEN_BACK);
 
     // ここで画像のロード、初期設定を行う
-    int font = CreateFontToHandle(nullptr, 400, 50);
+    int font = CreateFontToHandle(nullptr, 400, 30);
     int image_map[PLACE_MAX];
     for (int i = 0; i < PLACE_MAX; i++) {
         image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
     }
-    int image_plane = LoadGraph(IMAGE_PLANE_PATH);
+    int image_current = LoadGraph(IMAGE_CURRENT_PATH);
     int image_arrow = LoadGraph(IMAGE_ARROW_PATH);
     int audio_start = LoadSoundMem(AUDIO_START_PATH);
     int audio_stop = LoadSoundMem(AUDIO_STOP_PATH);
+    int audio_warning = LoadSoundMem(AUDIO_WARNING_PATH);
 
     int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
@@ -317,18 +345,18 @@ void get_json_data() {
 
             // 数値の表示
             int wide;
-            wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
+            wide = GetDrawFormatStringWidthToHandle(font, "%.1fm/s", speed);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
-                                     GetColor(255, 255, 255), font, "%.1f", speed);
-            wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
+                                     GetColor(255, 255, 255), font, "%.1fm/s", speed);
+            wide = GetDrawFormatStringWidthToHandle(font, "%dm", (int)altitude / 100);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
-                                     GetColor(255, 255, 255), font, "%.2f", altitude);
-            wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
+                                     GetColor(255, 255, 255), font, "%dm", (int)altitude / 100);
+            wide = GetDrawFormatStringWidthToHandle(font, "%drpm", rpm);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
-                                     GetColor(255, 255, 255), font, "%d", rpm);
-            wide = GetDrawFormatStringWidthToHandle(font, "%d", trim);
+                                     GetColor(255, 255, 255), font, "%drpm", rpm);
+            wide = GetDrawFormatStringWidthToHandle(font, "%dm", distance);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
-                                     GetColor(255, 255, 255), font, "%d", trim);
+                                     GetColor(255, 255, 0), font, "%dm", distance);
 
             // ロールとピッチに応じて色を変える
             // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
@@ -364,9 +392,9 @@ void get_json_data() {
 
             // 現在地に矢印を表示
             int w, h;
-            GetGraphSize(image_plane, &w, &h);
-            DrawRotaGraph(x, y, 0.3, yaw, image_plane, true);
-            // DrawCircle(x, y, 5, RED);
+            GetGraphSize(image_current, &w, &h);
+            DrawRotaGraph(x, y, 0.2, gpsCourse, image_current, true);
+            // DrawCircle(x, y, 5, COLOR_RED);
 
             // 軌跡の追加
             if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
@@ -376,6 +404,9 @@ void get_json_data() {
                     trajectory_y.push_back(y);
                 }
             }
+
+            // 飛行距離計算
+            distance = (int)cal_distance(longitude, latitude, START_POINT[0], START_POINT[1]);
 
             // 軌跡の描画
             for (int i = 1; i < trajectory_x.size(); i++) {
@@ -390,7 +421,7 @@ void get_json_data() {
                            Y_SCALE[current_place]);
                 x += SCREEN_WIDTH / 2;
                 y += SCREEN_HEIGHT / 2;
-                GetGraphSize(image_plane, &w, &h);
+                GetGraphSize(image_current, &w, &h);
                 DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0,
                               std::stod(winds[i].WindDirection) * M_PI / 180.0,
                               image_arrow, true);
@@ -425,6 +456,28 @@ void get_json_data() {
                 }
             }
 
+            // 旋回ポイントにプロット
+            for (int i = 0; i < 2; i++) {
+                int px = (int) ((TURNING_POINT[i][0] - C_LON[current_place]) * X_SCALE[current_place]);
+                int py = (int) ((TURNING_POINT[i][1] - C_LAT[current_place]) * Y_SCALE[current_place]);
+                px += SCREEN_WIDTH / 2;
+                py += SCREEN_HEIGHT / 2;
+
+                DrawCircle(px, py, 20, COLOR_YELLOW_RED);
+            }
+
+            int px = (int) ((START_POINT[0] - C_LON[current_place]) * X_SCALE[current_place]);
+            int py = (int) ((START_POINT[1] - C_LAT[current_place]) * Y_SCALE[current_place]);
+            px += SCREEN_WIDTH / 2;
+            py += SCREEN_HEIGHT / 2;
+            // 5, 10, 15, 18kmに扇形を描画
+            const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
+            for (int i = 0; i < 4; i++) {
+                DrawCircle(px, py, DISTANCE_BORDER[i] * 45, COLOR_WHITE, false, 5);
+            }
+            // プラットホーム場所にプロット
+            DrawBox(px - 10, py - 10, px + 10, py + 10, COLOR_YELLOW_RED, true);
+
             // ログを収集していなければ左上に四角を描画
             if (!log_state) {
                 DrawBox(0, 0, bar_width, bar_width, COLOR_WHITE, true);
@@ -454,6 +507,14 @@ void get_json_data() {
                 }
                 log_count--;
             }
+
+            if (roll > 10 || pitch > 10 || speed > 7.5) {
+                if (!CheckSoundMem(audio_warning))
+                    PlaySoundMem(audio_warning, DX_PLAYTYPE_LOOP);
+            } else {
+                StopSoundMem(audio_warning);
+            }
+
         } catch (...) {
             // catch all exception
         }
