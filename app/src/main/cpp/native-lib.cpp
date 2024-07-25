@@ -29,7 +29,7 @@ static const char *IMAGE_CURRENT_PATH = "current.png";
 static const char *IMAGE_ARROW_PATH = "arrow.png";
 static const char *AUDIO_START_PATH = "start.wav";
 static const char *AUDIO_STOP_PATH = "stop.wav";
-static const char *AUDIO_WARNING_PATH = "warning.wav";
+static const char *AUDIO_WARNING_PATH = "warning.mp3";
 
 static const double START_POINT[2] = {136.254344, 35.294230};
 static const double TURNING_POINT[2][2] = {{136.124324, 35.416626}, {136.063712, 35.250789}};
