@@ -221,8 +221,8 @@ void get_json_data() {
             JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             roll = JsonInput_Sensor["data"]["Roll"];
             pitch = JsonInput_Sensor["data"]["Pitch"];
-            roll = roll - standard_roll;
-            pitch = pitch - standard_pitch;
+            roll = (-1 * roll) - standard_roll;
+            pitch = (-1 * pitch) - standard_pitch;
             yaw = JsonInput_Sensor["data"]["Yaw"];
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
             speed = JsonInput_Sensor["data"]["AirSpeed"];
