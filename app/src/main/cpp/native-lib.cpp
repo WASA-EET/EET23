@@ -369,10 +369,10 @@ void get_json_data() {
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
                                      GetColor(255, 255, 255), font, "%.1f", speed);
             DrawStringToHandle(800, 350, "m/s", GetColor(255, 255, 255), font_unit);
-            wide = GetDrawFormatStringWidthToHandle(font, "%d", (int)altitude / 100);
+            wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude / 100.0);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
-                                     GetColor(255, 255, 255), font, "%d", (int)altitude / 100);
-            DrawStringToHandle(800, 850, "m", GetColor(255, 255, 255), font_unit);
+                                     GetColor(255, 255, 255), font, "%.2f", altitude / 100.0);
+            DrawStringToHandle(850, 850, "m", GetColor(255, 255, 255), font_unit);
             wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
                                      GetColor(255, 255, 255), font, "%d", rpm);
