@@ -29,7 +29,8 @@ static const char *IMAGE_CURRENT_PATH = "current.png";
 static const char *IMAGE_ARROW_PATH = "arrow.png";
 static const char *AUDIO_START_PATH = "start.wav";
 static const char *AUDIO_STOP_PATH = "stop.wav";
-static const char *AUDIO_WARNING_PATH = "warning.wav";
+static const char *AUDIO_WARNING1_PATH = "warning1.wav";
+static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
 static const double START_POINT[2] = {136.254344, 35.294230};
 static const double TURNING_POINT[2][2] = {{136.124324, 35.416626}, {136.063712, 35.250789}};
@@ -293,7 +294,8 @@ void get_json_data() {
     int image_arrow = LoadGraph(IMAGE_ARROW_PATH);
     int audio_start = LoadSoundMem(AUDIO_START_PATH);
     int audio_stop = LoadSoundMem(AUDIO_STOP_PATH);
-    int audio_warning = LoadSoundMem(AUDIO_WARNING_PATH);
+    int audio_warning1 = LoadSoundMem(AUDIO_WARNING1_PATH);
+    int audio_warning2 = LoadSoundMem(AUDIO_WARNING2_PATH);
 
     int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
@@ -325,12 +327,14 @@ void get_json_data() {
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
-#if 1
+#if 0
 #ifndef TEST_CASE
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
                 if (res_data) JsonString_Server = res_data->body;
 #endif
+#endif
+#if 1
                 // HMAC認証符号を追加してサーバーにPOST
                 std::string hmac_base64;
                 hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(),
@@ -537,11 +541,20 @@ void get_json_data() {
                 log_count--;
             }
 
-            if (abs(roll) > 10 || abs(pitch) > 10 || speed > 7.5) {
-                if (CheckSoundMem(audio_warning) == 0)
-                    PlaySoundMem(audio_warning, DX_PLAYTYPE_LOOP);
+            // Roll, Pitchが基準値以上の時の警報音
+            if (abs(roll) > 10 || abs(pitch) > 10) {
+                if (CheckSoundMem(audio_warning1) == 0)
+                    PlaySoundMem(audio_warning1, DX_PLAYTYPE_LOOP);
             } else {
-                StopSoundMem(audio_warning);
+                StopSoundMem(audio_warning1);
+            }
+
+            // 対気速度が基準値以上の時の警報音
+            if (speed > 7.5) {
+                if (CheckSoundMem(audio_warning2) == 0)
+                    PlaySoundMem(audio_warning2, DX_PLAYTYPE_LOOP);
+            } else {
+                StopSoundMem(audio_warning2);
             }
 
         } catch (...) {
