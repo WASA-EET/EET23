@@ -463,8 +463,8 @@ void get_json_data() {
                 }
                 // 2本ならログの記録を開始（または終了）
                 if (GetTouchInputNum() == 2) {
-                    standard_roll = roll;
-                    standard_pitch = pitch;
+                    standard_roll = roll + standard_roll;
+                    standard_pitch = pitch + standard_pitch;
                     if (!log_state)
                         start_log();
                     else
