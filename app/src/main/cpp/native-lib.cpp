@@ -67,6 +67,8 @@ std::vector<int> trajectory_y; // 可変長ベクトル y成分
 static double roll = 0.0; // 左右の傾き
 static double pitch = 0.0; // 前後の傾き
 static double yaw = 0.0; // 方向
+static double standard_roll = 0.0;
+static double standard_pitch = 0.0;
 static double gpsCourse = 0.0; // GPSの方向
 static double speed = 0.0; // 対気速度
 static double altitude = 0; // 高度（m）
@@ -218,6 +220,8 @@ void get_json_data() {
             JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             roll = JsonInput_Sensor["data"]["Roll"];
             pitch = JsonInput_Sensor["data"]["Pitch"];
+            roll -= standard_roll;
+            pitch -= standard_pitch;
             yaw = JsonInput_Sensor["data"]["Yaw"];
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
             speed = JsonInput_Sensor["data"]["AirSpeed"];
@@ -459,6 +463,8 @@ void get_json_data() {
                 }
                 // 2本ならログの記録を開始（または終了）
                 if (GetTouchInputNum() == 2) {
+                    standard_roll = roll;
+                    standard_pitch = pitch;
                     if (!log_state)
                         start_log();
                     else
