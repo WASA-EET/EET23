@@ -153,8 +153,8 @@ void start_log() {
                 ofs << JsonInput_Sensor["data"]["GPSAltitude"] << ", ";
                 ofs << JsonInput_Sensor["data"]["GPSCourse"] << ", ";
                 ofs << JsonInput_Sensor["data"]["GPSSpeed"] << ", ";
-                ofs << JsonInput_Sensor["data"]["Roll"] << ", ";
-                ofs << JsonInput_Sensor["data"]["Pitch"] << ", ";
+                ofs << roll << ", ";
+                ofs << pitch << ", ";
                 ofs << JsonInput_Sensor["data"]["Yaw"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Temperature"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Pressure"] << ", ";
@@ -220,8 +220,8 @@ void get_json_data() {
             JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             roll = JsonInput_Sensor["data"]["Roll"];
             pitch = JsonInput_Sensor["data"]["Pitch"];
-            roll -= standard_roll;
-            pitch -= standard_pitch;
+            roll = roll - standard_roll;
+            pitch = pitch - standard_pitch;
             yaw = JsonInput_Sensor["data"]["Yaw"];
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
             speed = JsonInput_Sensor["data"]["AirSpeed"];
