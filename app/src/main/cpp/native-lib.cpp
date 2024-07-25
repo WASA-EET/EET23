@@ -44,14 +44,14 @@ enum [[maybe_unused]] {
     PLACE_MAX,
 };
 // 各場所のURL（琵琶湖、富士川、大利根）※ MAPBOXからダウンロード可能
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.16,35.35,10.9,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.16,35.35,10.8,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH[PLACE_MAX] = {"biwako.png", "hujikawa.png", "ootone.png"};
 static const double C_LAT[PLACE_MAX] = {35.35, 35.121, 35.8594}; // 中心の緯度
 static const double C_LON[PLACE_MAX] = {136.16, 138.6315, 140.2412}; // 中心の経度
-static const double X_SCALE[PLACE_MAX] = {4100.0, 220650.0, 156500.0}; // X座標の拡大率
-static const double Y_SCALE[PLACE_MAX] = {-5000.0, -274500.0, -194000.0}; // Y座標の拡大率
+static const double X_SCALE[PLACE_MAX] = {4900.0, 220650.0, 156500.0}; // X座標の拡大率
+static const double Y_SCALE[PLACE_MAX] = {-6000.0, -274500.0, -194000.0}; // Y座標の拡大率
 
 static int current_place = 0;
 
@@ -494,7 +494,7 @@ void get_json_data() {
                 const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
                 for (int i = 0; i < 4; i++) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
-                    DrawCircle(px, py, DISTANCE_BORDER[i] * 45, COLOR_WHITE, false, 5);
+                    DrawCircle(px, py, DISTANCE_BORDER[i] * 53.8, COLOR_WHITE, false, 5);
                     SetDrawBlendMode(DX_BLENDMODE_NOBLEND, NULL);
                 }
                 // プラットホーム場所にプロット
