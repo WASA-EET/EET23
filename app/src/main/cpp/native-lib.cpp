@@ -538,7 +538,7 @@ void get_json_data() {
             }
 
             if (abs(roll) > 10 || abs(pitch) > 10 || speed > 7.5) {
-                if (!CheckSoundMem(audio_warning))
+                // if (CheckSoundMem(audio_warning) == 0)
                     PlaySoundMem(audio_warning, DX_PLAYTYPE_LOOP);
             } else {
                 StopSoundMem(audio_warning);
