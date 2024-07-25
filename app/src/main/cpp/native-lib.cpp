@@ -44,14 +44,14 @@ enum [[maybe_unused]] {
     PLACE_MAX,
 };
 // 各場所のURL（琵琶湖、富士川、大利根）※ MAPBOXからダウンロード可能
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.15,35.35,10.5,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.16,35.35,10.9,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 // https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
 static const char *IMAGE_MAP_PATH[PLACE_MAX] = {"biwako.png", "hujikawa.png", "ootone.png"};
 static const double C_LAT[PLACE_MAX] = {35.35, 35.121, 35.8594}; // 中心の緯度
-static const double C_LON[PLACE_MAX] = {136.15, 138.6315, 140.2412}; // 中心の経度
+static const double C_LON[PLACE_MAX] = {136.16, 138.6315, 140.2412}; // 中心の経度
 static const double X_SCALE[PLACE_MAX] = {4100.0, 220650.0, 156500.0}; // X座標の拡大率
-static const double Y_SCALE[PLACE_MAX] = {-5050.0, -274500.0, -194000.0}; // Y座標の拡大率
+static const double Y_SCALE[PLACE_MAX] = {-5000.0, -274500.0, -194000.0}; // Y座標の拡大率
 
 static int current_place = 0;
 
@@ -94,24 +94,26 @@ static int log_count = 0;
 static const int LOG_START_STOP_MARK_TIME = 60;
 static std::ofstream ofs;
 
-double EARTH_RAD = 6378.137; // km
-
 double deg2rad(double deg) {
     return deg * M_PI / 180.0;
 }
 
+double RX = 6378.137; // 回転楕円体の長半径（赤道半径）[km]
+double RY = 6356.752; // 回転楕円体の短半径（極半径) [km]
+
 double cal_distance(double x1, double y1, double x2, double y2) {
-    /*
-      pointA(lng x1, lat y1), pointB(lng x2, lat y2)
-      D = Rcos^-1(siny1siny2 + cosy1cosy2cosΔx)
-      Δx = x2 - x1
-      R = 6378.137[km]
-    */
     x1 = deg2rad(x1);
     x2 = deg2rad(x2);
     y1 = deg2rad(y1);
     y2 = deg2rad(y2);
-    return EARTH_RAD * acos(sin(y1) * sin(y2) + cos(y1) * cos(y2) * cos(x2 - x1));
+
+    double dx = x2 - x1, dy = y2 - y1;
+    double mu = (y1 + y2) / 2.0; // μ
+    double E = sqrt(1 - pow(RY / RX, 2.0)); // 離心率
+    double W = sqrt(1 - pow(E * sin(mu), 2.0));
+    double M = RX * (1 - pow(E, 2.0)) / pow(W, 3.0); // 子午線曲率半径
+    double N = RX / W; // 卯酉線曲率半径
+    return sqrt(pow(M * dy, 2.0) + pow(N * dx * cos(mu), 2.0)) * 1000; // 距離[m]
 }
 
 // ログ保存用
@@ -277,7 +279,8 @@ void get_json_data() {
     SetDrawScreen(DX_SCREEN_BACK);
 
     // ここで画像のロード、初期設定を行う
-    int font = CreateFontToHandle(nullptr, 400, 30);
+    int font = CreateFontToHandle(nullptr, 300, 50);
+    int font_unit = CreateFontToHandle(nullptr, 100, 30);
     int image_map[PLACE_MAX];
     for (int i = 0; i < PLACE_MAX; i++) {
         image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
@@ -354,18 +357,22 @@ void get_json_data() {
 
             // 数値の表示
             int wide;
-            wide = GetDrawFormatStringWidthToHandle(font, "%.1fm/s", speed);
+            wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
-                                     GetColor(255, 255, 255), font, "%.1fm/s", speed);
-            wide = GetDrawFormatStringWidthToHandle(font, "%dm", (int)altitude / 100);
+                                     GetColor(255, 255, 255), font, "%.1f", speed);
+            DrawStringToHandle(800, 350, "m/s", GetColor(255, 255, 255), font_unit);
+            wide = GetDrawFormatStringWidthToHandle(font, "%d", (int)altitude / 100);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
-                                     GetColor(255, 255, 255), font, "%dm", (int)altitude / 100);
-            wide = GetDrawFormatStringWidthToHandle(font, "%drpm", rpm);
+                                     GetColor(255, 255, 255), font, "%d", (int)altitude / 100);
+            DrawStringToHandle(800, 850, "m", GetColor(255, 255, 255), font_unit);
+            wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
-                                     GetColor(255, 255, 255), font, "%drpm", rpm);
-            wide = GetDrawFormatStringWidthToHandle(font, "%dm", distance);
-            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1700,
-                                     GetColor(255, 255, 0), font, "%dm", distance);
+                                     GetColor(255, 255, 255), font, "%d", rpm);
+            DrawStringToHandle(800, 1350, "rpm", GetColor(255, 255, 255), font_unit);
+            wide = GetDrawFormatStringWidthToHandle(font_unit, "%d", distance);
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1850,
+                                     GetColor(255, 255, 0), font_unit, "%d", distance);
+            DrawStringToHandle(800, 1850, "m", GetColor(255, 255, 255), font_unit);
 
             // ロールとピッチに応じて色を変える
             // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
@@ -420,7 +427,7 @@ void get_json_data() {
             // 軌跡の描画
             for (int i = 1; i < trajectory_x.size(); i++) {
                 DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
-                         COLOR_RED, 5);
+                         COLOR_RED, 10);
             }
 
             for (int i = 0; i < winds.size(); i++) {
@@ -465,27 +472,34 @@ void get_json_data() {
                 }
             }
 
-            // 旋回ポイントにプロット
-            for (int i = 0; i < 2; i++) {
-                int px = (int) ((TURNING_POINT[i][0] - C_LON[current_place]) * X_SCALE[current_place]);
-                int py = (int) ((TURNING_POINT[i][1] - C_LAT[current_place]) * Y_SCALE[current_place]);
+            if (current_place == PLACE_BIWAKO) {
+                const int POINT_SIZE = 20;
+                // 旋回ポイントにプロット
+                for (int i = 0; i < 2; i++) {
+                    int px = (int) ((TURNING_POINT[i][0] - C_LON[current_place]) *
+                                    X_SCALE[current_place]);
+                    int py = (int) ((TURNING_POINT[i][1] - C_LAT[current_place]) *
+                                    Y_SCALE[current_place]);
+                    px += SCREEN_WIDTH / 2;
+                    py += SCREEN_HEIGHT / 2;
+
+                    DrawCircle(px, py, POINT_SIZE, COLOR_YELLOW_RED);
+                }
+
+                int px = (int) ((START_POINT[0] - C_LON[current_place]) * X_SCALE[current_place]);
+                int py = (int) ((START_POINT[1] - C_LAT[current_place]) * Y_SCALE[current_place]);
                 px += SCREEN_WIDTH / 2;
                 py += SCREEN_HEIGHT / 2;
-
-                DrawCircle(px, py, 20, COLOR_YELLOW_RED);
+                // 5, 10, 15, 18kmに扇形を描画
+                const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
+                for (int i = 0; i < 4; i++) {
+                    SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
+                    DrawCircle(px, py, DISTANCE_BORDER[i] * 45, COLOR_WHITE, false, 5);
+                    SetDrawBlendMode(DX_BLENDMODE_NOBLEND, NULL);
+                }
+                // プラットホーム場所にプロット
+                DrawBox(px - POINT_SIZE, py - POINT_SIZE, px + POINT_SIZE, py + POINT_SIZE, COLOR_YELLOW_RED, true);
             }
-
-            int px = (int) ((START_POINT[0] - C_LON[current_place]) * X_SCALE[current_place]);
-            int py = (int) ((START_POINT[1] - C_LAT[current_place]) * Y_SCALE[current_place]);
-            px += SCREEN_WIDTH / 2;
-            py += SCREEN_HEIGHT / 2;
-            // 5, 10, 15, 18kmに扇形を描画
-            const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
-            for (int i = 0; i < 4; i++) {
-                DrawCircle(px, py, DISTANCE_BORDER[i] * 45, COLOR_WHITE, false, 5);
-            }
-            // プラットホーム場所にプロット
-            DrawBox(px - 10, py - 10, px + 10, py + 10, COLOR_YELLOW_RED, true);
 
             // ログを収集していなければ左上に四角を描画
             if (!log_state) {
