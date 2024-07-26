@@ -18,6 +18,9 @@
 // SIMを使わない場合（マイコンにのみ接続）
 // #define NO_SIM
 
+// 風向・風速の表示
+// #define SHOW_WIND
+
 static std::string err;
 
 static const std::string PLANE_AID = "7777";
@@ -245,6 +248,7 @@ void get_json_data() {
             }
         }
 
+#ifdef SHOW_WIND
         if (!JsonString_Server.empty()) {
             if (nlohmann::json::accept(JsonString_Server)) {
                 JsonInput_Server = nlohmann::json::parse(JsonString_Server);
@@ -265,6 +269,7 @@ void get_json_data() {
                 winds.erase(winds.begin() + plane_index);
             }
         }
+#endif
 
     }
     catch (nlohmann::json::exception &e) {
@@ -339,7 +344,7 @@ void get_json_data() {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef NO_SIM
-#ifndef TEST_CASE
+#ifdef SHOW_WIND
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
                 if (res_data) JsonString_Server = res_data->body;
@@ -448,7 +453,7 @@ void get_json_data() {
                          COLOR_RED, 10);
             }
 
-#if 0
+#ifdef SHOW_WIND
             // 風向・風速描画
             for (int i = 0; i < winds.size(); i++) {
                 x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) *
