@@ -56,6 +56,7 @@ static const double Y_SCALE[PLACE_MAX] = {-6000.0, -274500.0, -194000.0}; // Y�
 
 static int current_place = 0;
 
+// std::string JSON_SAMPLE = "{\"AID\": \"7777\", \"Time\": \"2024-07-25 16:35:23\", \"data\": {\"Yaw\": 209.3125, \"Roll\": -7.8125, \"Trim\": -7, \"Pitch\": -3.625, \"Rudder\": 0, \"AirSpeed\": 0, \"Altitude\": 344, \"Elevator\": 0.514500022, \"GPSSpeed\": 0, \"Latitude\": 0, \"Pressure\": 999.5440674, \"GPSCourse\": 0, \"Longitude\": 0, \"DPSAltitude\": 159.7719879, \"GPSAltitude\": 0, \"Temperature\": 31.6811142, \"GroundPressure\": 1018.690002, \"PropellerRotationSpeed\": 0}}";
 std::string JsonString_Sensor;
 std::string JsonString_Server;
 nlohmann::json JsonInput_Sensor;
@@ -74,7 +75,6 @@ static double gpsCourse = 0.0; // GPSの方向
 static double speed = 0.0; // 対気速度
 static double altitude = 0; // 高度（m）
 static int rpm = 0; // ペラ回転数（rpm）
-static int trim = 0; // トリム値
 static double latitude = 0.0; // 緯度
 static double longitude = 0.0; // 経度
 static int distance = 0.0; // プラットホームからの距離
@@ -215,8 +215,8 @@ void get_json_data() {
     winds[1].Longitude = std::to_string(136.085166);
     winds[1].Latitude = std::to_string(35.315548);
 #else
-    // 通信関係のこととかを色々書く
     try {
+        // JsonString_Sensor = JSON_SAMPLE;
         if (!JsonString_Sensor.empty()) {
             JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             roll = JsonInput_Sensor["data"]["Roll"];
@@ -230,7 +230,6 @@ void get_json_data() {
             rpm = JsonInput_Sensor["data"]["PropellerRotationSpeed"];
             latitude = JsonInput_Sensor["data"]["Latitude"];
             longitude = JsonInput_Sensor["data"]["Longitude"];
-            trim = JsonInput_Sensor["data"]["Trim"];
 
             if (!log_state && JsonInput_Sensor["LOG"] == "ON") {
                 start_log();
@@ -327,12 +326,10 @@ void get_json_data() {
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
-#if 0
 #ifndef TEST_CASE
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
                 if (res_data) JsonString_Server = res_data->body;
-#endif
 #endif
 #if 1
                 // HMAC認証符号を追加してサーバーにPOST
@@ -417,7 +414,7 @@ void get_json_data() {
             // 現在地に矢印を表示
             int w, h;
             GetGraphSize(image_current, &w, &h);
-            DrawRotaGraph(x, y, 0.2, gpsCourse, image_current, true);
+            DrawRotaGraph(x, y, 0.2, gpsCourse * M_PI / 180.0, image_current, true);
             // DrawCircle(x, y, 5, COLOR_RED);
 
             // 軌跡の追加
@@ -438,6 +435,8 @@ void get_json_data() {
                          COLOR_RED, 10);
             }
 
+#if 0
+            // 風向・風速描画
             for (int i = 0; i < winds.size(); i++) {
                 x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) *
                            X_SCALE[current_place]);
@@ -450,6 +449,7 @@ void get_json_data() {
                               std::stod(winds[i].WindDirection) * M_PI / 180.0,
                               image_arrow, true);
             }
+#endif
 
             // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
             if (GetTouchInputNum() > 0)
@@ -504,8 +504,8 @@ void get_json_data() {
                 const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
                 for (int i = 0; i < 4; i++) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
-                    DrawCircle(px, py, DISTANCE_BORDER[i] * 53.8, COLOR_WHITE, false, 5);
-                    SetDrawBlendMode(DX_BLENDMODE_NOBLEND, NULL);
+                    DrawCircle(px, py, (int)(DISTANCE_BORDER[i] * 53.8), COLOR_WHITE, false, 5);
+                    SetDrawBlendMode(DX_BLENDMODE_NOBLEND, (int)NULL);
                 }
                 // プラットホーム場所にプロット
                 DrawBox(px - POINT_SIZE, py - POINT_SIZE, px + POINT_SIZE, py + POINT_SIZE, COLOR_YELLOW_RED, true);
@@ -523,12 +523,12 @@ void get_json_data() {
                     if (log_count == LOG_START_STOP_MARK_TIME) {
                         PlaySoundMem(audio_start, DX_PLAYTYPE_BACK);
                     }
-                    DrawTriangleAA(SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
-                                   SCREEN_HEIGHT / 2 - START_STOP_ICON_WIDTH / 2,
-                                   SCREEN_WIDTH / 2 - START_STOP_ICON_WIDTH / 2,
-                                   SCREEN_HEIGHT / 2 + START_STOP_ICON_WIDTH / 2,
-                                   SCREEN_WIDTH / 2 + START_STOP_ICON_WIDTH / 2,
-                                   SCREEN_HEIGHT / 2, COLOR_GREEN, true);
+                    DrawTriangleAA((float)SCREEN_WIDTH / 2 - (float)START_STOP_ICON_WIDTH / 2,
+                                   (float)SCREEN_HEIGHT / 2 - (float)START_STOP_ICON_WIDTH / 2,
+                                   (float)SCREEN_WIDTH / 2 - (float)START_STOP_ICON_WIDTH / 2,
+                                   (float)SCREEN_HEIGHT / 2 + (float)START_STOP_ICON_WIDTH / 2,
+                                   (float)SCREEN_WIDTH / 2 + (float)START_STOP_ICON_WIDTH / 2,
+                                   (float)SCREEN_HEIGHT / 2, COLOR_GREEN, true);
                 } else {
                     if (log_count == LOG_START_STOP_MARK_TIME) {
                         PlaySoundMem(audio_stop, DX_PLAYTYPE_BACK);
