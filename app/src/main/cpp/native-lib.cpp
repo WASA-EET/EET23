@@ -15,8 +15,8 @@
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
-// SIMを使わない場合（マイコンにのみ接続）
-// #define NO_SIM
+// サーバーにアップロードしない場合
+// #define NO_UPLOAD
 
 // 風向・風速の表示
 // #define SHOW_WIND
@@ -338,7 +338,7 @@ void get_json_data() {
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
-#ifndef NO_SIM
+#ifndef NO_UPLOAD
 #ifdef SHOW_WIND
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
