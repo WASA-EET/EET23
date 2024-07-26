@@ -414,7 +414,7 @@ void get_json_data() {
             // 現在地に矢印を表示
             int w, h;
             GetGraphSize(image_current, &w, &h);
-            DrawRotaGraph(x, y, 0.2, gpsCourse * M_PI / 180.0, image_current, true);
+            DrawRotaGraph(x, y, 0.2, deg2rad(gpsCourse), image_current, true);
             // DrawCircle(x, y, 5, COLOR_RED);
 
             // 軌跡の追加
@@ -446,7 +446,7 @@ void get_json_data() {
                 y += SCREEN_HEIGHT / 2;
                 GetGraphSize(image_current, &w, &h);
                 DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0,
-                              std::stod(winds[i].WindDirection) * M_PI / 180.0,
+                              deg2rad(std::stod(winds[i].WindDirection)),
                               image_arrow, true);
             }
 #endif
