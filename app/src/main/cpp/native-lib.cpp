@@ -15,6 +15,9 @@
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
+// SIMを使わない場合（マイコンにのみ接続）
+// #define NO_SIM
+
 static std::string err;
 
 static const std::string PLANE_AID = "7777";
@@ -335,12 +338,12 @@ void get_json_data() {
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
+#ifndef NO_SIM
 #ifndef TEST_CASE
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
                 if (res_data) JsonString_Server = res_data->body;
 #endif
-#if 1
                 // HMAC認証符号を追加してサーバーにPOST
                 std::string hmac_base64;
                 hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(),
