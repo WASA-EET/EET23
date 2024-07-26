@@ -424,7 +424,7 @@ void get_json_data() {
             int w, h;
             const double exRate = 0.2;
             GetGraphSize(image_current, &w, &h);
-            DrawRotaGraph(x + (int)(w * exRate) / 2, y + (int)(h * exRate) / 2, exRate, deg2rad(gpsCourse), image_current, true);
+            DrawRotaGraph(x - (int)(w * exRate) / 2, y - (int)(h * exRate) / 2, exRate, deg2rad(gpsCourse), image_current, true);
             // DrawCircle(x, y, 5, COLOR_RED);
 
             // 軌跡の追加
