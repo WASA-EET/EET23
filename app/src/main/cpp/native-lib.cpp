@@ -39,7 +39,7 @@ static const char *AUDIO_WARNING1_PATH = "warning1.wav";
 static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
 static const double START_POINT[2] = {136.254344, 35.294230};
-static const double TURNING_POINT[2][2] = {{136.124324, 35.416626}, {136.063712, 35.250789}};
+static const double TURNING_POINT[2][2] = {{136.124324, 35.416626}, {136.061343, 35.258477}};
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
