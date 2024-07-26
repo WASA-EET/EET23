@@ -16,7 +16,7 @@
 // #define TEST_CASE
 
 // サーバーにアップロードしない場合
-#define NO_UPLOAD
+// #define NO_UPLOAD
 
 // 風向・風速の表示
 // #define SHOW_WIND
