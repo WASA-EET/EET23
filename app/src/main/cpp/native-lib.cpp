@@ -21,8 +21,6 @@
 // 風向・風速の表示
 // #define SHOW_WIND
 
-static std::string err;
-
 static const std::string PLANE_AID = "7777";
 
 static const int SCREEN_WIDTH = 1080;
@@ -249,7 +247,6 @@ void get_json_data() {
                 stop_log();
             }
         }
-
 #ifdef SHOW_WIND
         if (!JsonString_Server.empty()) {
             if (nlohmann::json::accept(JsonString_Server)) {
@@ -272,16 +269,12 @@ void get_json_data() {
             }
         }
 #endif
-
     }
     catch (nlohmann::json::exception &e) {
         // 文字列をJsonに変換できない場合に行う処理
         // Jsonに入っているべきデータが存在しない場合
         clsDx();
         printfDx(e.what());
-    }
-    catch (const char* err) {
-
     }
     catch (...) {
         // catch all exception
