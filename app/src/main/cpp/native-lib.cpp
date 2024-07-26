@@ -485,10 +485,10 @@ void get_json_data() {
             if (current_place == PLACE_BIWAKO) {
                 const int POINT_SIZE = 20;
                 // 旋回ポイントにプロット
-                for (int i = 0; i < 2; i++) {
-                    int px = (int) ((TURNING_POINT[i][0] - C_LON[current_place]) *
+                for (auto i : TURNING_POINT) {
+                    int px = (int) ((i[0] - C_LON[current_place]) *
                                     X_SCALE[current_place]);
-                    int py = (int) ((TURNING_POINT[i][1] - C_LAT[current_place]) *
+                    int py = (int) ((i[1] - C_LAT[current_place]) *
                                     Y_SCALE[current_place]);
                     px += SCREEN_WIDTH / 2;
                     py += SCREEN_HEIGHT / 2;
@@ -502,9 +502,9 @@ void get_json_data() {
                 py += SCREEN_HEIGHT / 2;
                 // 5, 10, 15, 18kmに扇形を描画
                 const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
-                for (int i = 0; i < 4; i++) {
+                for (int i : DISTANCE_BORDER) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
-                    DrawCircle(px, py, (int)(DISTANCE_BORDER[i] * 53.8), COLOR_WHITE, false, 5);
+                    DrawCircle(px, py, (int)(i * 53.8), COLOR_WHITE, false, 5);
                     SetDrawBlendMode(DX_BLENDMODE_NOBLEND, (int)NULL);
                 }
                 // プラットホーム場所にプロット
