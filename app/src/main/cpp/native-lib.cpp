@@ -16,7 +16,7 @@
 // #define TEST_CASE
 
 // サーバーにアップロードしない場合
-// #define NO_UPLOAD
+#define NO_UPLOAD
 
 // 風向・風速の表示
 // #define SHOW_WIND
@@ -57,8 +57,8 @@ enum [[maybe_unused]] {
 static const char *IMAGE_MAP_PATH[PLACE_MAX] = {"biwako.png", "hujikawa.png", "ootone.png"};
 static const double C_LAT[PLACE_MAX] = {35.35, 35.121, 35.8594}; // 中心の緯度
 static const double C_LON[PLACE_MAX] = {136.16, 138.6315, 140.2412}; // 中心の経度
-static const double X_SCALE[PLACE_MAX] = {4900.0, 220650.0, 156500.0}; // X座標の拡大率
-static const double Y_SCALE[PLACE_MAX] = {-6000.0, -274500.0, -194000.0}; // Y座標の拡大率
+static const double X_SCALE[PLACE_MAX] = {5000.0, 220650.0, 156500.0}; // X座標の拡大率
+static const double Y_SCALE[PLACE_MAX] = {-6200.0, -274500.0, -194000.0}; // Y座標の拡大率
 
 static int current_place = 0;
 
@@ -83,8 +83,8 @@ static double gpsCourse = 0.0; // GPSの方向
 static double speed = 0.0; // 対気速度
 static double altitude = 0; // 高度（m）
 static int rpm = 0; // ペラ回転数（rpm）
-static double latitude = 0.0; // 緯度
-static double longitude = 0.0; // 経度
+static double latitude = 0; // 緯度
+static double longitude = 0; // 経度
 static int distance = 0.0; // プラットホームからの距離
 
 // サーバーから収集したデータ
@@ -430,6 +430,7 @@ void get_json_data() {
             // 現在地に矢印を表示
             const double exRate = 0.2;
             DrawRotaGraph(x, y, exRate, deg2rad(gpsCourse), image_current, true);
+            // DrawCircle(x, y, 5, COLOR_RED); // デバッグ用
 
             // 軌跡の追加
             if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
@@ -472,7 +473,7 @@ void get_json_data() {
                 touch_time = 0;
 
             // 1秒以上連続2本以上の指で画面に触れたら
-            if (touch_time > 60) {
+            if (touch_time > 120) {
                 touch_time = 0;
                 // 1本なら軌跡を削除
                 if (GetTouchInputNum() == 1) {
@@ -518,7 +519,7 @@ void get_json_data() {
                 const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
                 for (int i : DISTANCE_BORDER) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
-                    DrawCircle(px, py, (int)(i * 53.8), COLOR_WHITE, false, 5);
+                    DrawCircle(px, py, (int)(i * 55), COLOR_WHITE, false, 5);
                     SetDrawBlendMode(DX_BLENDMODE_NOBLEND, (int)NULL);
                 }
                 // プラットホーム場所にプロット
