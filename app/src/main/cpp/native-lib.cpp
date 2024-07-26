@@ -428,11 +428,8 @@ void get_json_data() {
             y += SCREEN_HEIGHT / 2;
 
             // 現在地に矢印を表示
-            int w, h;
             const double exRate = 0.2;
-            GetGraphSize(image_current, &w, &h);
-            DrawRotaGraph(x - (int)(w * exRate) / 2, y - (int)(h * exRate) / 2, exRate, deg2rad(gpsCourse), image_current, true);
-            // DrawCircle(x, y, 5, COLOR_RED);
+            DrawRotaGraph(x, y, exRate, deg2rad(gpsCourse), image_current, true);
 
             // 軌跡の追加
             if (x > 0 && x < SCREEN_WIDTH && y > 0 && y < SCREEN_HEIGHT) {
