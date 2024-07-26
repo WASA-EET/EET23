@@ -15,6 +15,8 @@
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
+static std::string err;
+
 static const std::string PLANE_AID = "7777";
 
 static const int SCREEN_WIDTH = 1080;
@@ -218,7 +220,9 @@ void get_json_data() {
     try {
         // JsonString_Sensor = JSON_SAMPLE;
         if (!JsonString_Sensor.empty()) {
-            JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
+            if (nlohmann::json::accept(JsonString_Sensor)) {
+                JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
+            }
             roll = JsonInput_Sensor["data"]["Roll"];
             pitch = JsonInput_Sensor["data"]["Pitch"];
             roll = (-1 * roll) - standard_roll;
@@ -239,7 +243,9 @@ void get_json_data() {
         }
 
         if (!JsonString_Server.empty()) {
-            JsonInput_Server = nlohmann::json::parse(JsonString_Server);
+            if (nlohmann::json::accept(JsonString_Server)) {
+                JsonInput_Server = nlohmann::json::parse(JsonString_Server);
+            }
             winds.resize(JsonInput_Server.size());
             int plane_index = -1;
             for (int i = 0; i < winds.size(); i++) {
@@ -263,6 +269,9 @@ void get_json_data() {
         // Jsonに入っているべきデータが存在しない場合
         clsDx();
         printfDx(e.what());
+    }
+    catch (const char* err) {
+
     }
     catch (...) {
         // catch all exception
