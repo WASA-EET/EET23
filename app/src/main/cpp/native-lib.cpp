@@ -105,13 +105,15 @@ static int log_count = 0;
 static const int LOG_START_STOP_MARK_TIME = 60;
 static std::ofstream ofs;
 
-double deg2rad(double deg) {
+// 弧度法をラジアンに変換
+inline double deg2rad(double deg) {
     return deg * M_PI / 180.0;
 }
 
 double RX = 6378.137; // 回転楕円体の長半径（赤道半径）[km]
 double RY = 6356.752; // 回転楕円体の短半径（極半径) [km]
 
+// 2点間の座標から距離を算出（入力は弧度法）
 double cal_distance(double x1, double y1, double x2, double y2) {
     x1 = deg2rad(x1);
     x2 = deg2rad(x2);
@@ -127,7 +129,7 @@ double cal_distance(double x1, double y1, double x2, double y2) {
     return sqrt(pow(M * dy, 2.0) + pow(N * dx * cos(mu), 2.0)) * 1000; // 距離[m]
 }
 
-// ログ保存用
+// ログの記録を開始。ログはcsvとしてSDカードに書き込まれる
 void start_log() {
 
     // 時刻取得、文字列変換
@@ -190,12 +192,14 @@ void start_log() {
     log_count = LOG_START_STOP_MARK_TIME;
 }
 
+// ログの記録を終了
 void stop_log() {
     ofs.close();
     log_state = false;
     log_count = LOG_START_STOP_MARK_TIME;
 }
 
+// Json文字列をDeserializeする
 void get_json_data() {
 #ifdef TEST_CASE
     roll = 5;
