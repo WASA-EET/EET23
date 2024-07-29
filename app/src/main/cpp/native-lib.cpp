@@ -16,7 +16,7 @@
 // #define TEST_CASE
 
 // サーバーにアップロードしない場合
-// #define NO_UPLOAD
+// #define NO_SERVER
 
 // 風向・風速の表示
 // #define SHOW_WIND
@@ -327,6 +327,7 @@ void get_json_data() {
     });
     microcontroller_http_thread.detach();
 
+#ifndef NO_SERVER
     // サーバー関連の処理（サーバーを使わない場合このスレッドは不要です）
     std::thread server_http_thread = std::thread([]() {
         httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp"); // サーバーのURL
@@ -338,7 +339,6 @@ void get_json_data() {
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
-#ifndef NO_UPLOAD
 #ifdef SHOW_WIND
                 // 風速・風向をサーバーから取得
                 httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
@@ -354,13 +354,13 @@ void get_json_data() {
                 httplib::Headers headers = {{"Authorization", hmac_base64}};
                 auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor,
                                            "application/json");
-#endif
             } catch (...) {
                 // catch all exception
             }
         }
     });
     server_http_thread.detach();
+#endif
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
