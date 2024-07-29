@@ -335,9 +335,10 @@ void get_json_data() {
     });
     microcontroller_http_thread.detach();
 
+    // サーバー関連の処理（サーバーを使わない場合このスレッドは不要です）
     std::thread server_http_thread = std::thread([]() {
-        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp");
-        const std::string PASSWORD = "LMAJjvOi";
+        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp"); // サーバーのURL
+        const std::string PASSWORD = "LMAJjvOi"; // パスワード（現在は無効化済）
         uint8_t KEY[32];
         uint8_t HMAC[32];
         sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
