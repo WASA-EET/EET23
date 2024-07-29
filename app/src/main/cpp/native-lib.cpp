@@ -21,6 +21,9 @@
 // 風向・風速の表示
 // #define SHOW_WIND
 
+// 警報音無効化
+// #define DISABLE_ALERT
+
 static const std::string PLANE_AID = "7777";
 
 static const int SCREEN_WIDTH = 1080;
@@ -473,7 +476,7 @@ void get_json_data() {
                 touch_time = 0;
 
             // 1秒以上連続2本以上の指で画面に触れたら
-            if (touch_time > 120) {
+            if (touch_time > 60) {
                 touch_time = 0;
                 // 1本なら軌跡を削除
                 if (GetTouchInputNum() == 1) {
@@ -556,6 +559,7 @@ void get_json_data() {
                 log_count--;
             }
 
+#ifndef DISABLE_ALERT
             // Roll, Pitchが基準値以上の時の警報音
             if (abs(roll) > 10 || abs(pitch) > 10) {
                 if (CheckSoundMem(audio_warning1) == 0)
@@ -571,6 +575,7 @@ void get_json_data() {
             } else {
                 StopSoundMem(audio_warning2);
             }
+#endif
 
         } catch (...) {
             // catch all exception
