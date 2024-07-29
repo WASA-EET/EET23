@@ -475,7 +475,7 @@ void get_json_data() {
             else
                 touch_time = 0;
 
-            // 1秒以上連続2本以上の指で画面に触れたら
+            // 1秒以上連続で画面に触れたら
             if (touch_time > 60) {
                 touch_time = 0;
                 // 1本なら軌跡を削除
