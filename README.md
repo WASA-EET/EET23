@@ -27,6 +27,9 @@ WASA（23代～）のパイロット＋追走者用スマホアプリ。鳥人�
 * [Json for Modern C++（JSON管理用）](https://github.com/nlohmann/json)
 * [cpp-httplib（HTTP通信用）](https://github.com/yhirose/cpp-httplib)
 
+# Screenshot
+![Screenshot](/screenshot.bmp)
+
 # 原案者
 * [水本幸希（23代電装班長）](https://github.com/21km43)
 

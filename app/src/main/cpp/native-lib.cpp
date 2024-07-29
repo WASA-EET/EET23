@@ -65,7 +65,7 @@ static const double Y_SCALE[PLACE_MAX] = {-6200.0, -274500.0, -194000.0}; // Y�
 
 static int current_place = 0;
 
-// std::string JSON_SAMPLE = "{\"AID\": \"7777\", \"Time\": \"2024-07-25 16:35:23\", \"data\": {\"Yaw\": 209.3125, \"Roll\": -7.8125, \"Trim\": -7, \"Pitch\": -3.625, \"Rudder\": 0, \"AirSpeed\": 0, \"Altitude\": 344, \"Elevator\": 0.514500022, \"GPSSpeed\": 0, \"Latitude\": 0, \"Pressure\": 999.5440674, \"GPSCourse\": 0, \"Longitude\": 0, \"DPSAltitude\": 159.7719879, \"GPSAltitude\": 0, \"Temperature\": 31.6811142, \"GroundPressure\": 1018.690002, \"PropellerRotationSpeed\": 0}}";
+[[maybe_unused]] std::string JSON_SAMPLE = R"({"AID": "7777", "Time": "2024-07-25 16:35:23", "data": {"Yaw": 209.3125, "Roll": -7.8125, "Trim": -7, "Pitch": -3.625, "Rudder": 0, "AirSpeed": 0, "Altitude": 344, "Elevator": 0.514500022, "GPSSpeed": 0, "Latitude": 35.330268, "Pressure": 999.5440674, "GPSCourse": 300, "Longitude": 136.214575, "DPSAltitude": 159.7719879, "GPSAltitude": 0, "Temperature": 31.6811142, "GroundPressure": 1018.690002, "PropellerRotationSpeed": 0}})";
 std::string JsonString_Sensor;
 nlohmann::json JsonInput_Sensor;
 #ifdef SHOW_WIND
@@ -79,7 +79,6 @@ std::vector<int> trajectory_x; // 可変長ベクトル x成分
 std::vector<int> trajectory_y; // 可変長ベクトル y成分
 static double roll = 0.0; // 左右の傾き
 static double pitch = 0.0; // 前後の傾き
-static double yaw = 0.0; // 方向
 static double standard_roll = 0.0;
 static double standard_pitch = 0.0;
 static double gpsCourse = 0.0; // GPSの方向
@@ -205,18 +204,11 @@ void stop_log() {
 // Json文字列をDeserializeする
 void get_json_data() {
 #ifdef TEST_CASE
-    roll = 5;
-    pitch = 1;
-    yaw = 3;
-    speed = 4;
-    altitude = 2.2;
-    rpm = 10;
+    JsonString_Sensor = JSON_SAMPLE;
 
-    // 35.199357, 136.050708
-    // latitude = 35.199357;
-    // longitude = 136.050708;
-    //latitude += 0.0001;
-    //longitude += 0.0008;
+    static double dx = 0.0, dy = 0.0;
+    dy += 0.0001;
+    dx -= 0.0001;
 
     winds.resize(2);
 
@@ -229,9 +221,8 @@ void get_json_data() {
     winds[1].WindDirection = std::to_string(321);
     winds[1].Longitude = std::to_string(136.085166);
     winds[1].Latitude = std::to_string(35.315548);
-#else
+#endif
     try {
-        // JsonString_Sensor = JSON_SAMPLE;
         if (!JsonString_Sensor.empty()) {
             if (nlohmann::json::accept(JsonString_Sensor)) {
                 JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
@@ -247,7 +238,10 @@ void get_json_data() {
             rpm = JsonInput_Sensor["data"]["PropellerRotationSpeed"];
             latitude = JsonInput_Sensor["data"]["Latitude"];
             longitude = JsonInput_Sensor["data"]["Longitude"];
-
+#ifdef TEST_CASE
+            latitude += dy;
+            longitude += dx;
+#endif
             if (!log_state && JsonInput_Sensor["LOG"] == "ON") {
                 start_log();
             } else if (log_state && JsonInput_Sensor["LOG"] == "OFF") {
@@ -286,7 +280,6 @@ void get_json_data() {
     catch (...) {
         // catch all exception
     }
-#endif
 }
 
 // エントリーポイント、[[maybe_unused]]は警告抑制用
