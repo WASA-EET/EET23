@@ -28,6 +28,7 @@ WASA（23代～）のパイロット＋追走者用スマホアプリ。鳥人�
 * [cpp-httplib（HTTP通信用）](https://github.com/yhirose/cpp-httplib)
 
 # Screenshot
+※ パラメータは適当です
 ![Screenshot](/screenshot.bmp)
 
 # 原案者
