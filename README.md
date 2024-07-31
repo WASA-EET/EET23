@@ -32,7 +32,8 @@ WASA（23代～）のパイロット＋追走者用スマホアプリ。鳥人�
 ![Screenshot](/screenshot.bmp)
 
 # 原案者
-* [水本幸希（23代電装班長）](https://github.com/21km43)
+* 水本幸希（23代電装班長）
+  * [GitHub](https://github.com/21km43)
   * [Twitter](https://twitter.com/21km43)
 
 # Contributer
