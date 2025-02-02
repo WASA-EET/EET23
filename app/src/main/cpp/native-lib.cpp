@@ -227,10 +227,10 @@ void get_json_data() {
             if (nlohmann::json::accept(JsonString_Sensor)) {
                 JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             }
-            roll = JsonInput_Sensor["data"]["Roll"];
-            pitch = JsonInput_Sensor["data"]["Pitch"];
-            roll = (-1 * roll) - standard_roll;
-            pitch = (-1 * pitch) - standard_pitch;
+            // roll = JsonInput_Sensor["data"]["Roll"];
+            // pitch = JsonInput_Sensor["data"]["Pitch"];
+            // roll = (-1 * roll) - standard_roll;
+            // pitch = (-1 * pitch) - standard_pitch;
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
             speed = JsonInput_Sensor["data"]["AirSpeed"];
             altitude = JsonInput_Sensor["data"]["Altitude"];
@@ -241,11 +241,6 @@ void get_json_data() {
             latitude += dy;
             longitude += dx;
 #endif
-            if (!log_state && JsonInput_Sensor["LOG"] == "ON") {
-                start_log();
-            } else if (log_state && JsonInput_Sensor["LOG"] == "OFF") {
-                stop_log();
-            }
         }
 #ifdef SHOW_WIND
         if (!JsonString_Server.empty()) {
@@ -301,7 +296,9 @@ void get_json_data() {
         image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
     }
     int image_current = LoadGraph(IMAGE_CURRENT_PATH);
+#ifdef SHOW_WIND
     int image_arrow = LoadGraph(IMAGE_ARROW_PATH);
+#endif
     int audio_start = LoadSoundMem(AUDIO_START_PATH);
     int audio_stop = LoadSoundMem(AUDIO_STOP_PATH);
     int audio_warning1 = LoadSoundMem(AUDIO_WARNING1_PATH);
@@ -312,13 +309,25 @@ void get_json_data() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread microcontroller_http_thread = std::thread([]() {
-        httplib::Client cli_microcontroller("http://192.168.43.4"); // 計測マイコンのIPアドレス
+        httplib::Client cli_microcontroller("http://192.168.1.41"); // 計測マイコンのIPアドレス
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
                 httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
-                if (res_data) JsonString_Sensor = res_data->body;
+                if (res_data) {
+                    std::string digest_get = res_data->get_header_value("SHA256");
+                    SHA256_HASH digest;
+                    Sha256Calculate(res_data->body.data(), res_data->body.size(), &digest);
+                    char digest_calc[64 + 1];
+                    for (int i = 0; i < 32; i++)
+                    {
+                        sprintf((char *)&digest_calc[i * 2], "%02x", digest.bytes[i]);
+                    }
+                    if (strcmp(digest_get.c_str(), digest_calc) == 0) {
+                        JsonString_Sensor = res_data->body;
+                    }
+                }
 #endif
             } catch (...) {
                 // catch all exception
@@ -378,9 +387,9 @@ void get_json_data() {
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
                                      GetColor(255, 255, 255), font, "%.1f", speed);
             DrawStringToHandle(800, 350, "m/s", GetColor(255, 255, 255), font_unit);
-            wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude / 100.0);
+            wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
-                                     GetColor(255, 255, 255), font, "%.2f", altitude / 100.0);
+                                     GetColor(255, 255, 255), font, "%.2f", altitude);
             DrawStringToHandle(850, 850, "m", GetColor(255, 255, 255), font_unit);
             wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
