@@ -77,8 +77,9 @@ nlohmann::json JsonInput_Server;
 // マイコンから収集したデータ
 std::vector<int> trajectory_x; // 可変長ベクトル x成分
 std::vector<int> trajectory_y; // 可変長ベクトル y成分
-static double roll = 0.0; // 左右の傾き
-static double pitch = 0.0; // 前後の傾き
+static double roll = 0.0;
+static double pitch = 0.0;
+static double yaw = 0.0;
 static double standard_roll = 0.0;
 static double standard_pitch = 0.0;
 static double gpsCourse = 0.0; // GPSの方向
@@ -168,11 +169,11 @@ void start_log() {
                 ofs << JsonInput_Sensor["data"]["GPSSpeed"] << ", ";
                 ofs << roll << ", ";
                 ofs << pitch << ", ";
-                ofs << JsonInput_Sensor["data"]["Yaw"] << ", ";
+                ofs << yaw << ", ";
                 ofs << JsonInput_Sensor["data"]["Temperature"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Pressure"] << ", ";
                 ofs << JsonInput_Sensor["data"]["GroundPressure"] << ", ";
-                ofs << JsonInput_Sensor["data"]["DPSAltitude"] << ", ";
+                ofs << JsonInput_Sensor["data"]["BMPAltitude"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Altitude"] << ", ";
                 ofs << JsonInput_Sensor["data"]["AirSpeed"] << ", ";
                 ofs << JsonInput_Sensor["data"]["PropellerRotationSpeed"] << ", ";
@@ -229,6 +230,7 @@ void get_json_data() {
             }
             // roll = JsonInput_Sensor["data"]["Roll"];
             // pitch = JsonInput_Sensor["data"]["Pitch"];
+            // yaw = JsonInput_Sensor["data"]["Yaw"];
             // roll = (-1 * roll) - standard_roll;
             // pitch = (-1 * pitch) - standard_pitch;
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
@@ -270,6 +272,8 @@ void get_json_data() {
         // Jsonに入っているべきデータが存在しない場合
         clsDx();
         printfDx(e.what());
+        printfDx("\n");
+        printfDx(JsonString_Sensor.c_str());
     }
     catch (...) {
         // catch all exception
