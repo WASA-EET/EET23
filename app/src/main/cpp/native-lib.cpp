@@ -310,12 +310,15 @@ void get_json_data() {
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread microcontroller_http_thread = std::thread([]() {
         httplib::Client cli_microcontroller("http://192.168.1.41"); // 計測マイコンのIPアドレス
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #ifndef TEST_CASE
                 httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
                 if (res_data) {
+                    // Check SHA256 Header
                     std::string digest_get = res_data->get_header_value("SHA256");
                     SHA256_HASH digest;
                     Sha256Calculate(res_data->body.data(), res_data->body.size(), &digest);
@@ -333,6 +336,7 @@ void get_json_data() {
                 // catch all exception
             }
         }
+#pragma clang diagnostic pop
     });
     microcontroller_http_thread.detach();
 
@@ -345,6 +349,8 @@ void get_json_data() {
         uint8_t HMAC[32];
         sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
         while (true) {
             try {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
