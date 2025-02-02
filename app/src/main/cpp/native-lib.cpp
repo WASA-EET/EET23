@@ -77,9 +77,9 @@ nlohmann::json JsonInput_Server;
 // マイコンから収集したデータ
 std::vector<int> trajectory_x; // 可変長ベクトル x成分
 std::vector<int> trajectory_y; // 可変長ベクトル y成分
-static double roll = 0.0;
-static double pitch = 0.0;
-static double yaw = 0.0;
+[[maybe_unused]] static double roll = 0.0;
+[[maybe_unused]] static double pitch = 0.0;
+[[maybe_unused]] static double yaw = 0.0;
 static double standard_roll = 0.0;
 static double standard_pitch = 0.0;
 static double gpsCourse = 0.0; // GPSの方向
@@ -154,7 +154,12 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, Roll, Pitch, Yaw, Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, PropellerRotationSpeed, Rudder, Elevator, Trim, RunningTime"
+            << "Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, "
+            << "AccelX, AccelY, AccelZ, GyroX, GyroY, GyroZ, MagX, MagY, MagZ, "
+            << "Roll_Mad6, Pitch_Mad6, Yaw_Mad6, Roll_Mad9, Pitch_Mad9, Yaw_Mad9, "
+            << "Roll_Mah6, Pitch_Mah6, Yaw_Mah6, Roll_Mah9, Pitch_Mah9, Yaw_Mah9, "
+            << "Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, "
+            << "PropellerRotationSpeed, Rudder, Elevator, Trim, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
@@ -167,9 +172,27 @@ void start_log() {
                 ofs << JsonInput_Sensor["data"]["GPSAltitude"] << ", ";
                 ofs << JsonInput_Sensor["data"]["GPSCourse"] << ", ";
                 ofs << JsonInput_Sensor["data"]["GPSSpeed"] << ", ";
-                ofs << roll << ", ";
-                ofs << pitch << ", ";
-                ofs << yaw << ", ";
+                ofs << JsonInput_Sensor["data"]["AccelX"] << ", ";
+                ofs << JsonInput_Sensor["data"]["AccelY"] << ", ";
+                ofs << JsonInput_Sensor["data"]["AccelZ"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GyroX"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GyroY"] << ", ";
+                ofs << JsonInput_Sensor["data"]["GyroZ"] << ", ";
+                ofs << JsonInput_Sensor["data"]["MagX"] << ", ";
+                ofs << JsonInput_Sensor["data"]["MagY"] << ", ";
+                ofs << JsonInput_Sensor["data"]["MagZ"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Roll_Mad6"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Pitch_Mad6"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Yaw_Mad6"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Roll_Mad9"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Pitch_Mad9"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Yaw_Mad9"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Roll_Mah6"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Pitch_Mah6"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Yaw_Mah6"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Roll_Mah9"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Pitch_Mah9"] << ", ";
+                ofs << JsonInput_Sensor["data"]["Yaw_Mah9"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Temperature"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Pressure"] << ", ";
                 ofs << JsonInput_Sensor["data"]["GroundPressure"] << ", ";
