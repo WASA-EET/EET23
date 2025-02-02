@@ -272,8 +272,6 @@ void get_json_data() {
         // Jsonに入っているべきデータが存在しない場合
         clsDx();
         printfDx(e.what());
-        printfDx("\n");
-        printfDx(JsonString_Sensor.c_str());
     }
     catch (...) {
         // catch all exception
