@@ -65,7 +65,6 @@ static const double Y_SCALE[PLACE_MAX] = {-6200.0, -274500.0, -194000.0}; // Y�
 
 static int current_place = 0;
 
-[[maybe_unused]] std::string JSON_SAMPLE = R"({"AID": "7777", "Time": "2024-07-25 16:35:23", "data": {"Yaw": 209.3125, "Roll": -7.8125, "Trim": -7, "Pitch": -3.625, "Rudder": 0, "AirSpeed": 0, "Altitude": 344, "Elevator": 0.514500022, "GPSSpeed": 0, "Latitude": 35.330268, "Pressure": 999.5440674, "GPSCourse": 300, "Longitude": 136.214575, "DPSAltitude": 159.7719879, "GPSAltitude": 0, "Temperature": 31.6811142, "GroundPressure": 1018.690002, "PropellerRotationSpeed": 0}})";
 std::string JsonString_Sensor;
 nlohmann::json JsonInput_Sensor;
 #ifdef SHOW_WIND
@@ -228,8 +227,6 @@ void stop_log() {
 // Json文字列をDeserializeする
 void get_json_data() {
 #ifdef TEST_CASE
-    JsonString_Sensor = JSON_SAMPLE;
-
     static double dx = 0.0, dy = 0.0;
     dy += 0.0001;
     dx -= 0.0001;
