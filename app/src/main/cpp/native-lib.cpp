@@ -334,7 +334,7 @@ void get_json_data() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread microcontroller_http_thread = std::thread([]() {
-        httplib::Client cli_microcontroller("http://192.168.1.41"); // 計測マイコンのIPアドレス
+        httplib::Client cli_microcontroller("http://192.168.43.140"); // 計測マイコンのIPアドレス
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
         while (true) {
