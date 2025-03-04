@@ -88,6 +88,8 @@ static int rpm = 0; // ペラ回転数（rpm）
 static double latitude = 0; // 緯度
 static double longitude = 0; // 経度
 static int distance = 0.0; // プラットホームからの距離
+static float trim = 0.0f;
+static int lora_rssi = 0; // LoRa通信のRSSI（送信側では常に0）
 
 // サーバーから収集したデータ
 struct WIND {
@@ -158,7 +160,7 @@ void start_log() {
             << "Roll_Mad6, Pitch_Mad6, Yaw_Mad6, Roll_Mad9, Pitch_Mad9, Yaw_Mad9, "
             << "Roll_Mah6, Pitch_Mah6, Yaw_Mah6, Roll_Mah9, Pitch_Mah9, Yaw_Mah9, "
             << "Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, "
-            << "PropellerRotationSpeed, Rudder, Elevator, Trim, RunningTime"
+            << "PropellerRotationSpeed, Rudder, Elevator, Trim, LoRaRSSI, RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
@@ -202,6 +204,7 @@ void start_log() {
                 ofs << JsonInput_Sensor["data"]["Rudder"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Elevator"] << ", ";
                 ofs << JsonInput_Sensor["data"]["Trim"] << ", ";
+                ofs << JsonInput_Sensor["data"]["LoRaRSSI"] << ", ";
                 ofs << JsonInput_Sensor["RunningTime"] << ", ";
                 ofs << std::endl;
             } catch (...) {
@@ -259,6 +262,8 @@ void get_json_data() {
             rpm = JsonInput_Sensor["data"]["PropellerRotationSpeed"];
             latitude = JsonInput_Sensor["data"]["Latitude"];
             longitude = JsonInput_Sensor["data"]["Longitude"];
+            trim = JsonInput_Sensor["data"]["Trim"];
+            lora_rssi = JsonInput_Sensor["data"]["LoRaRSSI"];
 #ifdef TEST_CASE
             latitude += dy;
             longitude += dx;
@@ -311,8 +316,9 @@ void get_json_data() {
     SetDrawScreen(DX_SCREEN_BACK);
 
     // ここで画像のロード、初期設定を行う
-    int font = CreateFontToHandle(nullptr, 300, 50);
-    int font_unit = CreateFontToHandle(nullptr, 100, 30);
+    int font = CreateFontToHandle(nullptr, 250, 50);
+    int font_small = CreateFontToHandle(nullptr, 100, 30);
+    int font_mini = CreateFontToHandle(nullptr, 75, 30);
     int image_map[PLACE_MAX];
     for (int i = 0; i < PLACE_MAX; i++) {
         image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
@@ -411,22 +417,24 @@ void get_json_data() {
 
             // 数値の表示
             int wide;
+
+            DrawFormatStringToHandle(SCREEN_WIDTH / 16, 2090,
+                                     GetColor(160, 160, 255), font_mini, "Trim: %.1f", trim);
+            DrawFormatStringToHandle(SCREEN_WIDTH / 16, 2190,
+                                     GetColor(160, 160, 255), font_mini, "RSSI: %d", lora_rssi);
+
             wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
-            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 200,
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 100,
                                      GetColor(255, 255, 255), font, "%.1f", speed);
-            DrawStringToHandle(800, 350, "m/s", GetColor(255, 255, 255), font_unit);
+            DrawStringToHandle(800, 230, "m/s", GetColor(255, 255, 255), font_small);
             wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
-            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 700,
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 400,
                                      GetColor(255, 255, 255), font, "%.2f", altitude);
-            DrawStringToHandle(850, 850, "m", GetColor(255, 255, 255), font_unit);
+            DrawStringToHandle(850, 530, "m", GetColor(255, 255, 255), font_small);
             wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
-            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1200,
+            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 2000,
                                      GetColor(255, 255, 255), font, "%d", rpm);
-            DrawStringToHandle(800, 1350, "rpm", GetColor(255, 255, 255), font_unit);
-            wide = GetDrawFormatStringWidthToHandle(font_unit, "%d", distance);
-            DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1850,
-                                     GetColor(255, 255, 0), font_unit, "%d", distance);
-            DrawStringToHandle(800, 1850, "m", GetColor(255, 255, 255), font_unit);
+            DrawStringToHandle(750, 2130, "rpm", GetColor(255, 255, 255), font_small);
 
             // ロールとピッチに応じて色を変える
             // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
@@ -531,6 +539,11 @@ void get_json_data() {
             }
 
             if (current_place == PLACE_BIWAKO) {
+                wide = GetDrawFormatStringWidthToHandle(font_small, "%d", distance);
+                DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1850,
+                                         GetColor(255, 255, 0), font_small, "%d", distance);
+                DrawStringToHandle(800, 1850, "m", GetColor(255, 255, 255), font_small);
+
                 const int POINT_SIZE = 20;
                 // 旋回ポイントにプロット
                 for (auto i : TURNING_POINT) {
