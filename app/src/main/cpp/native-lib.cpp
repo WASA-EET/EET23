@@ -423,14 +423,20 @@ void get_json_data() {
             DrawFormatStringToHandle(SCREEN_WIDTH / 16, 2190,
                                      GetColor(160, 160, 255), font_mini, "RSSI: %d", lora_rssi);
 
+            DrawFormatStringToHandle(70, 190,
+                                     GetColor(255, 255, 255), font_mini, "機速");
             wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 100,
                                      GetColor(255, 255, 255), font, "%.1f", speed);
             DrawStringToHandle(800, 230, "m/s", GetColor(255, 255, 255), font_small);
+
+            DrawFormatStringToHandle(70, 490,
+                                     GetColor(255, 255, 255), font_mini, "高度");
             wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 400,
                                      GetColor(255, 255, 255), font, "%.2f", altitude);
             DrawStringToHandle(850, 530, "m", GetColor(255, 255, 255), font_small);
+
             wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 2000,
                                      GetColor(255, 255, 255), font, "%d", rpm);
