@@ -371,8 +371,8 @@ void get_json_data() {
 #ifndef NO_SERVER
     // サーバー関連の処理（サーバーを使わない場合このスレッドは不要です）
     std::thread server_http_thread = std::thread([]() {
-        httplib::Client cli_server("http://anemometer.staging.tyama.mydns.jp"); // サーバーのURL
-        const std::string PASSWORD = "LMAJjvOi"; // パスワード（現在は無効化済）
+        httplib::Client cli_server("http://192.168.1.40:8000"); // サーバーのURL（Cloudflare Zero Trust使用）
+        const std::string PASSWORD = "LMAJjvOi"; // パスワード
         uint8_t KEY[32];
         uint8_t HMAC[32];
         sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
