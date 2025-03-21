@@ -257,7 +257,7 @@ void get_json_data() {
             // roll = (-1 * roll) - standard_roll;
             // pitch = (-1 * pitch) - standard_pitch;
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
-            speed = JsonInput_Sensor["data"]["AirSpeed"];
+            speed = JsonInput_Sensor["data"]["GPSSpeed"];
             altitude = JsonInput_Sensor["data"]["Altitude"];
             rpm = JsonInput_Sensor["data"]["PropellerRotationSpeed"];
             latitude = JsonInput_Sensor["data"]["Latitude"];
