@@ -15,16 +15,8 @@
 // マイコンネットワークに接続しない場合のテスト用
 // #define TEST_CASE
 
-// サーバーを使わない場合
-// #define NO_SERVER
-
-// 風向・風速の表示
-// #define SHOW_WIND
-
-// 警報音無効化
-// #define DISABLE_ALERT
-
-static const std::string PLANE_AID = "7777";
+// 警報音有効化
+// #define ENABLE_ALERT
 
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
@@ -35,7 +27,6 @@ static const int SCREEN_HEIGHT = 2340;
 [[maybe_unused]] static const unsigned int COLOR_GREEN = GetColor(0x00, 0xb0, 0x6b);
 [[maybe_unused]] static const unsigned int COLOR_WHITE = GetColor(0xff, 0xff, 0xff);
 static const char *IMAGE_CURRENT_PATH = "current.png";
-static const char *IMAGE_ARROW_PATH = "arrow.png";
 static const char *AUDIO_START_PATH = "start.wav";
 static const char *AUDIO_STOP_PATH = "stop.wav";
 static const char *AUDIO_WARNING1_PATH = "warning1.wav";
@@ -67,10 +58,6 @@ static int current_place = 0;
 
 std::string JsonString_Sensor;
 nlohmann::json JsonInput_Sensor;
-#ifdef SHOW_WIND
-std::string JsonString_Server;
-nlohmann::json JsonInput_Server;
-#endif
 // 参考：https://qiita.com/yohm/items/0f389ba5c5de4e2df9cf
 
 // マイコンから収集したデータ
@@ -90,16 +77,6 @@ static double longitude = 0; // 経度
 static int distance = 0.0; // プラットホームからの距離
 static float trim = 0.0f;
 static int lora_rssi = 0; // LoRa通信のRSSI（送信側では常に0）
-
-// サーバーから収集したデータ
-struct WIND {
-    std::string WindSpeed;
-    std::string WindDirection;
-    std::string Latitude;
-    std::string Longitude;
-};
-
-std::vector<WIND> winds; // 風速・風向
 
 // 外部ストレージでアクセスできるのは「/storage/emulated/0/Android/data/[パッケージ名]/files/」に限られる
 static const std::string LOG_DIRECTORY = "/storage/emulated/0/Android/data/com.wasa.eet23/files/";
@@ -251,11 +228,11 @@ void get_json_data() {
             if (nlohmann::json::accept(JsonString_Sensor)) {
                 JsonInput_Sensor = nlohmann::json::parse(JsonString_Sensor);
             }
-            // roll = JsonInput_Sensor["data"]["Roll"];
-            // pitch = JsonInput_Sensor["data"]["Pitch"];
-            // yaw = JsonInput_Sensor["data"]["Yaw"];
-            // roll = (-1 * roll) - standard_roll;
-            // pitch = (-1 * pitch) - standard_pitch;
+            roll = JsonInput_Sensor["data"]["Roll_Mad9"];
+            pitch = JsonInput_Sensor["data"]["Pitch_Mad9"];
+            roll = (-1 * roll) - standard_roll;
+            pitch = (-1 * pitch) - standard_pitch;
+
             gpsCourse = JsonInput_Sensor["data"]["GPSCourse"];
             speed = JsonInput_Sensor["data"]["GPSSpeed"];
             altitude = JsonInput_Sensor["data"]["Altitude"];
@@ -269,28 +246,6 @@ void get_json_data() {
             longitude += dx;
 #endif
         }
-#ifdef SHOW_WIND
-        if (!JsonString_Server.empty()) {
-            if (nlohmann::json::accept(JsonString_Server)) {
-                JsonInput_Server = nlohmann::json::parse(JsonString_Server);
-            }
-            winds.resize(JsonInput_Server.size());
-            int plane_index = -1;
-            for (int i = 0; i < winds.size(); i++) {
-                if (JsonInput_Server[i]["AID"] == PLANE_AID) {
-                    plane_index = i;
-                    continue;
-                }
-                winds[i].WindSpeed = JsonInput_Server[i]["data"]["WindSpeed"];
-                winds[i].WindDirection = JsonInput_Server[i]["data"]["WindDirection"];
-                winds[i].Longitude = JsonInput_Server[i]["data"]["Longitude"];
-                winds[i].Latitude = JsonInput_Server[i]["data"]["Latitude"];
-            }
-            if (plane_index != -1) {
-                winds.erase(winds.begin() + plane_index);
-            }
-        }
-#endif
     }
     catch (nlohmann::json::exception &e) {
         // 文字列をJsonに変換できない場合に行う処理
@@ -324,14 +279,12 @@ void get_json_data() {
         image_map[i] = LoadGraph(IMAGE_MAP_PATH[i]);
     }
     int image_current = LoadGraph(IMAGE_CURRENT_PATH);
-#ifdef SHOW_WIND
-    int image_arrow = LoadGraph(IMAGE_ARROW_PATH);
-#endif
     int audio_start = LoadSoundMem(AUDIO_START_PATH);
     int audio_stop = LoadSoundMem(AUDIO_STOP_PATH);
+#ifdef ENABLE_ALERT
     int audio_warning1 = LoadSoundMem(AUDIO_WARNING1_PATH);
     int audio_warning2 = LoadSoundMem(AUDIO_WARNING2_PATH);
-
+#endif
     int touch_time = 0; // 連続でタッチされている時間
     int bar_width = 50;
 
@@ -367,43 +320,6 @@ void get_json_data() {
 #pragma clang diagnostic pop
     });
     microcontroller_http_thread.detach();
-
-#ifndef NO_SERVER
-    // サーバー関連の処理（サーバーを使わない場合このスレッドは不要です）
-    std::thread server_http_thread = std::thread([]() {
-        httplib::Client cli_server("http://192.168.1.40:8000"); // サーバーのURL（Cloudflare Zero Trust使用）
-        const std::string PASSWORD = "LMAJjvOi"; // パスワード
-        uint8_t KEY[32];
-        uint8_t HMAC[32];
-        sha256(PASSWORD.data(), PASSWORD.size(), KEY, 32);
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
-        while (true) {
-            try {
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-#ifdef SHOW_WIND
-                // 風速・風向をサーバーから取得
-                httplib::Result res_data = cli_server.Get("/data/LD/?format=json");
-                if (res_data) JsonString_Server = res_data->body;
-#endif
-                // HMAC認証符号を追加してサーバーにPOST
-                std::string hmac_base64;
-                hmac_sha256(KEY, sizeof(KEY), JsonString_Sensor.data(), JsonString_Sensor.size(),
-                            HMAC,
-                            sizeof(HMAC));
-                algorithm::encode_base64(std::vector<uint8_t>(HMAC, HMAC + sizeof(HMAC)),
-                                         hmac_base64);
-                httplib::Headers headers = {{"Authorization", hmac_base64}};
-                auto res = cli_server.Post("/data/create/", headers, JsonString_Sensor,
-                                           "application/json");
-            } catch (...) {
-                // catch all exception
-            }
-        }
-    });
-    server_http_thread.detach();
-#endif
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
@@ -496,22 +412,6 @@ void get_json_data() {
                 DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
                          COLOR_RED, 10);
             }
-
-#ifdef SHOW_WIND
-            // 風向・風速描画
-            for (int i = 0; i < winds.size(); i++) {
-                x = (int) ((std::stod(winds[i].Longitude) - C_LON[current_place]) *
-                           X_SCALE[current_place]);
-                y = (int) ((std::stod(winds[i].Latitude) - C_LAT[current_place]) *
-                           Y_SCALE[current_place]);
-                x += SCREEN_WIDTH / 2;
-                y += SCREEN_HEIGHT / 2;
-                GetGraphSize(image_current, &w, &h);
-                DrawRotaGraph(x, y, std::stod(winds[i].WindSpeed) * 1.0,
-                              deg2rad(std::stod(winds[i].WindDirection)),
-                              image_arrow, true);
-            }
-#endif
 
             // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
             if (GetTouchInputNum() > 0)
@@ -608,7 +508,7 @@ void get_json_data() {
                 log_count--;
             }
 
-#ifndef DISABLE_ALERT
+#ifdef ENABLE_ALERT
             // Roll, Pitchが基準値以上の時の警報音
             if (abs(roll) > 10 || abs(pitch) > 10) {
                 if (CheckSoundMem(audio_warning1) == 0)
