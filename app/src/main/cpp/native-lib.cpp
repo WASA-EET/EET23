@@ -1,6 +1,7 @@
 #include <thread>
 #include <string>
 #include <fstream>
+#include <array>
 #include "DxLib.h"
 #include "json.hpp"
 #include "httplib.h"
@@ -33,7 +34,9 @@ static const char *AUDIO_WARNING1_PATH = "warning1.wav";
 static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
 static const double START_POINT[2] = {136.254344, 35.294230};
-static const double TURNING_POINT[2][2] = {{136.124324, 35.416626}, {136.061343, 35.258477}};
+static const int TURNING_POINT_NUM = 3;
+static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{ START_POINT[0], START_POINT[1] }, {136.124324, 35.416626}, {136.061343, 35.258477}};
+static const int TURNING_DISTANCE[] = { 0, 18000, 36000, 54000, 72000, INT_MAX };
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
@@ -54,7 +57,10 @@ static const double C_LON[PLACE_MAX] = {136.16, 138.6315, 140.2412}; // 中心�
 static const double X_SCALE[PLACE_MAX] = {5000.0, 220650.0, 156500.0}; // X座標の拡大率
 static const double Y_SCALE[PLACE_MAX] = {-6200.0, -274500.0, -194000.0}; // Y座標の拡大率
 
-static int current_place = 0;
+static int current_place = PLACE_BIWAKO;
+static double current_point[2];
+static int cumulative_distance;
+static int turning_count;
 
 std::string JsonString_Sensor;
 nlohmann::json JsonInput_Sensor;
@@ -207,22 +213,36 @@ void stop_log() {
 // Json文字列をDeserializeする
 void get_json_data() {
 #ifdef TEST_CASE
+    const static int GPS_SAMPLING_NUM = 200;
+    const static double NOISE = 0.001;
+    static int gps_count = 1;
     static double dx = 0.0, dy = 0.0;
-    dy += 0.0001;
-    dx -= 0.0001;
-
-    winds.resize(2);
-
-    winds[0].WindSpeed = std::to_string(2);
-    winds[0].WindDirection = std::to_string(123);
-    winds[0].Longitude = std::to_string(136.175774);
-    winds[0].Latitude = std::to_string(35.293717);
-
-    winds[1].WindSpeed = std::to_string(0.5);
-    winds[1].WindDirection = std::to_string(321);
-    winds[1].Longitude = std::to_string(136.085166);
-    winds[1].Latitude = std::to_string(35.315548);
-#endif
+    switch (gps_count) {
+        case 1:
+            dx += (TURNING_POINT[1][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.0);
+            dy += (TURNING_POINT[1][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.0);
+            break;
+        case 2:
+            dx -= (TURNING_POINT[1][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.5);
+            dy -= (TURNING_POINT[1][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.5);
+            break;
+        case 3:
+            dx += (TURNING_POINT[2][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.0);
+            dy += (TURNING_POINT[2][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.0);
+            break;
+        case 4:
+            dx -= (TURNING_POINT[2][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.5);
+            dy -= (TURNING_POINT[2][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.5);
+            break;
+        default:
+            break;
+    }
+    if (distance > TURNING_DISTANCE[gps_count] && distance < 1000000) {
+        gps_count++;
+    }
+    longitude = START_POINT[0] + dx;
+    latitude = START_POINT[1] + dy;
+#else
     try {
         if (!JsonString_Sensor.empty()) {
             if (nlohmann::json::accept(JsonString_Sensor)) {
@@ -241,10 +261,6 @@ void get_json_data() {
             longitude = JsonInput_Sensor["data"]["Longitude"];
             trim = JsonInput_Sensor["data"]["Trim"];
             lora_rssi = JsonInput_Sensor["data"]["LoRaRSSI"];
-#ifdef TEST_CASE
-            latitude += dy;
-            longitude += dx;
-#endif
         }
     }
     catch (nlohmann::json::exception &e) {
@@ -256,6 +272,7 @@ void get_json_data() {
     catch (...) {
         // catch all exception
     }
+#endif
 }
 
 // エントリーポイント、[[maybe_unused]]は警告抑制用
@@ -320,6 +337,11 @@ void get_json_data() {
 #pragma clang diagnostic pop
     });
     microcontroller_http_thread.detach();
+
+    current_point[0] = START_POINT[0];
+    current_point[1] = START_POINT[1];
+    cumulative_distance = 0;
+    turning_count = 1;
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
@@ -405,7 +427,30 @@ void get_json_data() {
             }
 
             // 飛行距離計算
-            distance = (int)cal_distance(longitude, latitude, START_POINT[0], START_POINT[1]);
+            distance = cumulative_distance + (int)cal_distance(longitude, latitude, current_point[0], current_point[1]);
+
+            // 旋回地点まで来たら距離の計測起点を変更し、累積距離を加算
+            // マイコンからdistanceの値が取れるまでは大きな値になっているので、distance値が1000km以上ときは処理を行わない
+            if (distance >= TURNING_DISTANCE[turning_count] && distance < 1000000) {
+                // 各地点と現在地の距離確認
+                std::array<int, TURNING_POINT_NUM> distance_list{};
+                for (int i = 0; i < TURNING_POINT_NUM; i++)
+                {
+                    distance_list[i] = (int)cal_distance(longitude, latitude, TURNING_POINT[i][0], TURNING_POINT[i][1]);
+                }
+
+                // イテレータを取得し、最小値の位置（何番目）を調べる
+                auto it = std::min_element(distance_list.begin(), distance_list.end());
+                auto min_index = std::distance(distance_list.begin(), it);
+
+                // 起点位置を変更
+                current_point[0] = TURNING_POINT[min_index][0];
+                current_point[1] = TURNING_POINT[min_index][1];
+
+                // 累積距離を加算
+                cumulative_distance += TURNING_DISTANCE[turning_count] - TURNING_DISTANCE[turning_count - 1];
+                turning_count++;
+            }
 
             // 軌跡の描画
             for (int i = 1; i < trajectory_x.size(); i++) {
