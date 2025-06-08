@@ -32,7 +32,7 @@ static const char *AUDIO_STOP_PATH = "stop.wav";
 static const char *AUDIO_WARNING1_PATH = "warning1.wav";
 static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
-static const double START_POINT[2] = {136.254344, 35.294230};
+static const double START_POINT[2] = { 136.254344, 35.294230 };
 static const int TURNING_POINT_NUM = 3;
 static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{ START_POINT[0], START_POINT[1] }, {136.124324, 35.416626}, {136.061343, 35.258477}};
 static const int TURNING_DISTANCE[] = { 0, 18000, 36000, 54000, 72000, INT_MAX };
@@ -306,7 +306,7 @@ void get_json_data() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread microcontroller_http_thread = std::thread([]() {
-        httplib::Client cli_microcontroller("http://192.168.43.140"); // 計測マイコンのIPアドレス
+        httplib::Client cli_microcontroller("http://192.168.200.140"); // 計測マイコンのIPアドレス
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
         while (true) {
