@@ -137,12 +137,12 @@ void start_log() {
 
     // とりあえず1行目を埋める
     ofs
-            << "Date, Time, Latitude, Longitude, GPSAltitude, GPSCourse, GPSSpeed, "
-            << "AccelX, AccelY, AccelZ, GyroX, GyroY, GyroZ, MagX, MagY, MagZ, "
-            << "Roll_Mad6, Pitch_Mad6, Yaw_Mad6, Roll_Mad9, Pitch_Mad9, Yaw_Mad9, "
-            << "Roll_Mah6, Pitch_Mah6, Yaw_Mah6, Roll_Mah9, Pitch_Mah9, Yaw_Mah9, "
-            << "Temperature, Pressure, GroundPressure, DPSAltitude, Altitude, AirSpeed, "
-            << "PropellerRotationSpeed, Rudder, Elevator, Trim, LoRaRSSI, RunningTime"
+            << "Date,Time,Latitude,Longitude,GPSAltitude,GPSCourse,GPSSpeed,"
+            << "AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,MagX,MagY,MagZ,"
+            << "Roll_Mad6,Pitch_Mad6,Yaw_Mad6,Roll_Mad9,Pitch_Mad9,Yaw_Mad9,"
+            << "Roll_Mah6,Pitch_Mah6,Yaw_Mah6,Roll_Mah9,Pitch_Mah9,Yaw_Mah9,"
+            << "Temperature,Pressure,GroundPressure,DPSAltitude,Altitude,AirSpeed,"
+            << "PropellerRotationSpeed,Rudder,Elevator,Trim,LoRaRSSI,RunningTime"
             << std::endl;
 
     std::thread ofs_thread = std::thread([]() {
