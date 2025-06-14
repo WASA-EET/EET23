@@ -83,8 +83,7 @@ static int rpm = 0; // ペラ回転数（rpm）
 static double latitude = 0; // 緯度
 static double longitude = 0; // 経度
 static int distance = 0.0; // プラットホームからの距離
-static float trim = 0.0f;
-static int lora_rssi = 0; // LoRa通信のRSSI（送信側では常に0）
+static int trim = 0;
 
 // 外部ストレージでアクセスできるのは「/storage/emulated/0/Android/data/[パッケージ名]/files/」に限られる
 static const std::string LOG_DIRECTORY = "/storage/emulated/0/Android/data/com.wasa.eet23/files/";
@@ -222,20 +221,28 @@ void get_json_data() {
     static double dx = 0.0, dy = 0.0;
     switch (gps_count) {
         case 1:
-            dx += (TURNING_POINT[1][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.0);
-            dy += (TURNING_POINT[1][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.0);
+            dx += (TURNING_POINT[1][0] - START_POINT[0]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.0);
+            dy += (TURNING_POINT[1][1] - START_POINT[1]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.0);
             break;
         case 2:
-            dx -= (TURNING_POINT[1][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.5);
-            dy -= (TURNING_POINT[1][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.5);
+            dx -= (TURNING_POINT[1][0] - START_POINT[0]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.5);
+            dy -= (TURNING_POINT[1][1] - START_POINT[1]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 1.5);
             break;
         case 3:
-            dx += (TURNING_POINT[2][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.0);
-            dy += (TURNING_POINT[2][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.0);
+            dx += (TURNING_POINT[2][0] - START_POINT[0]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.0);
+            dy += (TURNING_POINT[2][1] - START_POINT[1]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.0);
             break;
         case 4:
-            dx -= (TURNING_POINT[2][0] - START_POINT[0]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.5);
-            dy -= (TURNING_POINT[2][1] - START_POINT[1]) / GPS_SAMPLING_NUM + (((double)GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.5);
+            dx -= (TURNING_POINT[2][0] - START_POINT[0]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.5);
+            dy -= (TURNING_POINT[2][1] - START_POINT[1]) / GPS_SAMPLING_NUM +
+                  (((double) GetRand(INT_MAX) / INT_MAX - 0.5) * NOISE * 2.5);
             break;
         default:
             break;
@@ -263,7 +270,6 @@ void get_json_data() {
             latitude = JsonInput_Sensor["data"]["Latitude"];
             longitude = JsonInput_Sensor["data"]["Longitude"];
             trim = JsonInput_Sensor["data"]["Trim"];
-            lora_rssi = JsonInput_Sensor["data"]["LoRaRSSI"];
         }
     }
     catch (nlohmann::json::exception &e) {
@@ -337,29 +343,37 @@ void get_json_data() {
             // 数値の表示
             int wide;
 
-            DrawFormatStringToHandle(SCREEN_WIDTH / 16, 2090,
-                                     GetColor(160, 160, 255), font_mini, "Trim: %.1f", trim);
-            DrawFormatStringToHandle(SCREEN_WIDTH / 16, 2190,
-                                     GetColor(160, 160, 255), font_mini, "RSSI: %d", lora_rssi);
+            // トリム表示
+            DrawFormatStringToHandle(SCREEN_WIDTH / 12, 1865,
+                                     GetColor(200, 200, 255), font_mini, "トリム");
+            DrawFormatStringToHandle(SCREEN_WIDTH / 12 + 275, 1850,
+                                     GetColor(200, 200, 255), font_small, "%d", trim);
 
+            DrawBox(SCREEN_WIDTH / 2 - 2, 1850, SCREEN_WIDTH / 2 + 2, 1975, COLOR_WHITE, true);
+
+            // 対気速度表示
             DrawFormatStringToHandle(70, 190,
-                                     GetColor(255, 255, 255), font_mini, "機速");
+                                     COLOR_WHITE, font_mini, "機速");
             wide = GetDrawFormatStringWidthToHandle(font, "%.1f", speed);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 100,
-                                     GetColor(255, 255, 255), font, "%.1f", speed);
-            DrawStringToHandle(800, 230, "m/s", GetColor(255, 255, 255), font_small);
+                                     COLOR_WHITE, font, "%.1f", speed);
+            DrawStringToHandle(800, 230, "m/s", COLOR_WHITE, font_small);
 
+            // 高度表示
             DrawFormatStringToHandle(70, 490,
-                                     GetColor(255, 255, 255), font_mini, "高度");
+                                     COLOR_WHITE, font_mini, "高度");
             wide = GetDrawFormatStringWidthToHandle(font, "%.2f", altitude);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 400,
-                                     GetColor(255, 255, 255), font, "%.2f", altitude);
-            DrawStringToHandle(850, 530, "m", GetColor(255, 255, 255), font_small);
+                                     COLOR_WHITE, font, "%.2f", altitude);
+            DrawStringToHandle(850, 530, "m", COLOR_WHITE, font_small);
 
+            // ペラ回転数表示
+            DrawFormatStringToHandle(70, 2090,
+                                     COLOR_WHITE, font_mini, "回転数");
             wide = GetDrawFormatStringWidthToHandle(font, "%d", rpm);
             DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 2000,
-                                     GetColor(255, 255, 255), font, "%d", rpm);
-            DrawStringToHandle(750, 2130, "rpm", GetColor(255, 255, 255), font_small);
+                                     COLOR_WHITE, font, "%d", rpm);
+            DrawStringToHandle(750, 2130, "rpm", COLOR_WHITE, font_small);
 
             // ロールとピッチに応じて色を変える
             // （1.0度以下→緑、1.0~2.0度→黄色、2.0~3.0度→オレンジ、3.0度以上→赤）
@@ -394,7 +408,7 @@ void get_json_data() {
             y += SCREEN_HEIGHT / 2;
 
             // 現在地に矢印を表示
-            const double exRate = 0.2;
+            const double exRate = 0.25;
             DrawRotaGraph(x, y, exRate, deg2rad(gpsCourse), image_current, true);
             // DrawCircle(x, y, 5, COLOR_RED); // デバッグ用
 
@@ -473,10 +487,11 @@ void get_json_data() {
             }
 
             if (current_place == PLACE_BIWAKO) {
+                // 飛行距離表示
                 wide = GetDrawFormatStringWidthToHandle(font_small, "%d", distance);
-                DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2, 1850,
-                                         GetColor(255, 255, 0), font_small, "%d", distance);
-                DrawStringToHandle(800, 1850, "m", GetColor(255, 255, 255), font_small);
+                DrawFormatStringToHandle(SCREEN_WIDTH / 2 - wide / 2 + 190, 1850,
+                                         COLOR_YELLOW, font_small, "%d", distance);
+                DrawStringToHandle(910, 1850, "m", COLOR_WHITE, font_small);
 
                 const int POINT_SIZE = 20;
                 // 旋回ポイントにプロット
