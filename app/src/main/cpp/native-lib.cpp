@@ -32,10 +32,12 @@ static const char *AUDIO_STOP_PATH = "stop.wav";
 static const char *AUDIO_WARNING1_PATH = "warning1.wav";
 static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
-static const double START_POINT[2] = { 136.254344, 35.294230 };
+static const double START_POINT[2] = {136.254344, 35.294230};
 static const int TURNING_POINT_NUM = 3;
-static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{ START_POINT[0], START_POINT[1] }, {136.124324, 35.416626}, {136.061343, 35.258477}};
-static const int TURNING_DISTANCE[] = { 0, 18000, 36000, 54000, 72000, INT_MAX };
+static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{START_POINT[0], START_POINT[1]},
+                                                           {136.124324,     35.416626},
+                                                           {136.061343,     35.258477}};
+static const int TURNING_DISTANCE[] = {0, 18000, 36000, 54000, 72000, INT_MAX};
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
@@ -307,34 +309,12 @@ void get_json_data() {
 
     // マニフェストに <uses-permission android:name="android.permission.INTERNET" /> の記載をお忘れなく
     std::thread microcontroller_http_thread = std::thread([]() {
-        httplib::Client cli_microcontroller("http://192.168.70.140"); // 計測マイコンのIPアドレス
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
-        while (true) {
-            try {
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-#ifndef TEST_CASE
-                httplib::Result res_data = cli_microcontroller.Get("/GetMeasurementData");
-                if (res_data) {
-                    // Check SHA256 Header
-                    std::string digest_get = res_data->get_header_value("SHA256");
-                    SHA256_HASH digest;
-                    Sha256Calculate(res_data->body.data(), res_data->body.size(), &digest);
-                    char digest_calc[64 + 1];
-                    for (int i = 0; i < 32; i++)
-                    {
-                        sprintf((char *)&digest_calc[i * 2], "%02x", digest.bytes[i]);
-                    }
-                    if (strcmp(digest_get.c_str(), digest_calc) == 0) {
-                        JsonString_Sensor = res_data->body;
-                    }
-                }
-#endif
-            } catch (...) {
-                // catch all exception
-            }
-        }
-#pragma clang diagnostic pop
+        httplib::Server svr_mcu;
+        svr_mcu.Post("/post", [](const httplib::Request &req, httplib::Response &res) {
+            JsonString_Sensor = req.body;
+            res.set_content("OK", "text/plain");
+        });
+        svr_mcu.listen("0.0.0.0", 35481);
     });
     microcontroller_http_thread.detach();
 
@@ -427,16 +407,17 @@ void get_json_data() {
             }
 
             // 飛行距離計算
-            distance = cumulative_distance + (int)cal_distance(longitude, latitude, current_point[0], current_point[1]);
+            distance = cumulative_distance +
+                       (int) cal_distance(longitude, latitude, current_point[0], current_point[1]);
 
             // 旋回地点まで来たら距離の計測起点を変更し、累積距離を加算
             // マイコンからdistanceの値が取れるまでは大きな値になっているので、distance値が1000km以上ときは処理を行わない
             if (distance >= TURNING_DISTANCE[turning_count] && distance < 1000000) {
                 // 各地点と現在地の距離確認
                 std::array<int, TURNING_POINT_NUM> distance_list{};
-                for (int i = 0; i < TURNING_POINT_NUM; i++)
-                {
-                    distance_list[i] = (int)cal_distance(longitude, latitude, TURNING_POINT[i][0], TURNING_POINT[i][1]);
+                for (int i = 0; i < TURNING_POINT_NUM; i++) {
+                    distance_list[i] = (int) cal_distance(longitude, latitude, TURNING_POINT[i][0],
+                                                          TURNING_POINT[i][1]);
                 }
 
                 // イテレータを取得し、最小値の位置（何番目）を調べる
@@ -448,7 +429,8 @@ void get_json_data() {
                 current_point[1] = TURNING_POINT[min_index][1];
 
                 // 累積距離を加算
-                cumulative_distance += TURNING_DISTANCE[turning_count] - TURNING_DISTANCE[turning_count - 1];
+                cumulative_distance +=
+                        TURNING_DISTANCE[turning_count] - TURNING_DISTANCE[turning_count - 1];
                 turning_count++;
             }
 
@@ -497,7 +479,7 @@ void get_json_data() {
 
                 const int POINT_SIZE = 20;
                 // 旋回ポイントにプロット
-                for (auto i : TURNING_POINT) {
+                for (auto i: TURNING_POINT) {
                     int px = (int) ((i[0] - C_LON[current_place]) *
                                     X_SCALE[current_place]);
                     int py = (int) ((i[1] - C_LAT[current_place]) *
@@ -514,13 +496,14 @@ void get_json_data() {
                 py += SCREEN_HEIGHT / 2;
                 // 5, 10, 15, 18kmに扇形を描画
                 const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
-                for (int i : DISTANCE_BORDER) {
+                for (int i: DISTANCE_BORDER) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
-                    DrawCircle(px, py, (int)(i * 55), COLOR_WHITE, false, 5);
-                    SetDrawBlendMode(DX_BLENDMODE_NOBLEND, (int)NULL);
+                    DrawCircle(px, py, (int) (i * 55), COLOR_WHITE, false, 5);
+                    SetDrawBlendMode(DX_BLENDMODE_NOBLEND, (int) NULL);
                 }
                 // プラットホーム場所にプロット
-                DrawBox(px - POINT_SIZE, py - POINT_SIZE, px + POINT_SIZE, py + POINT_SIZE, COLOR_YELLOW_RED, true);
+                DrawBox(px - POINT_SIZE, py - POINT_SIZE, px + POINT_SIZE, py + POINT_SIZE,
+                        COLOR_YELLOW_RED, true);
             }
 
             // ログを収集していなければ左上に四角を描画
@@ -535,12 +518,12 @@ void get_json_data() {
                     if (log_count == LOG_START_STOP_MARK_TIME) {
                         PlaySoundMem(audio_start, DX_PLAYTYPE_BACK);
                     }
-                    DrawTriangleAA((float)SCREEN_WIDTH / 2 - (float)START_STOP_ICON_WIDTH / 2,
-                                   (float)SCREEN_HEIGHT / 2 - (float)START_STOP_ICON_WIDTH / 2,
-                                   (float)SCREEN_WIDTH / 2 - (float)START_STOP_ICON_WIDTH / 2,
-                                   (float)SCREEN_HEIGHT / 2 + (float)START_STOP_ICON_WIDTH / 2,
-                                   (float)SCREEN_WIDTH / 2 + (float)START_STOP_ICON_WIDTH / 2,
-                                   (float)SCREEN_HEIGHT / 2, COLOR_GREEN, true);
+                    DrawTriangleAA((float) SCREEN_WIDTH / 2 - (float) START_STOP_ICON_WIDTH / 2,
+                                   (float) SCREEN_HEIGHT / 2 - (float) START_STOP_ICON_WIDTH / 2,
+                                   (float) SCREEN_WIDTH / 2 - (float) START_STOP_ICON_WIDTH / 2,
+                                   (float) SCREEN_HEIGHT / 2 + (float) START_STOP_ICON_WIDTH / 2,
+                                   (float) SCREEN_WIDTH / 2 + (float) START_STOP_ICON_WIDTH / 2,
+                                   (float) SCREEN_HEIGHT / 2, COLOR_GREEN, true);
                 } else {
                     if (log_count == LOG_START_STOP_MARK_TIME) {
                         PlaySoundMem(audio_stop, DX_PLAYTYPE_BACK);
