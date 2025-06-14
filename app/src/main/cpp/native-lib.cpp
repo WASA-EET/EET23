@@ -5,7 +5,6 @@
 #include "DxLib.h"
 #include "json.hpp"
 #include "httplib.h"
-#include "sha256.hpp"
 
 /*
  *  リポジトリ：https://github.com/WASA-EET/EET23
