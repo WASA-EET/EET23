@@ -18,6 +18,8 @@
 // 警報音有効化
 // #define ENABLE_ALERT
 
+static const int MEASUREMENT_HTTP_PORT = 35481; // 計測マイコンのHTTPポート番号
+
 static const int SCREEN_WIDTH = 1080;
 static const int SCREEN_HEIGHT = 2340;
 [[maybe_unused]] static const unsigned int COLOR_BLACK = GetColor(0x00, 0x00, 0x00);
@@ -314,7 +316,7 @@ void get_json_data() {
             JsonString_Sensor = req.body;
             res.set_content("OK", "text/plain");
         });
-        svr_mcu.listen("0.0.0.0", 35481);
+        svr_mcu.listen("0.0.0.0", MEASUREMENT_HTTP_PORT);
     });
     microcontroller_http_thread.detach();
 
