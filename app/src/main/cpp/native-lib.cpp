@@ -35,10 +35,10 @@ static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
 static const double START_POINT[2] = {136.254344, 35.294230};
 static const int TURNING_POINT_NUM = 3;
-static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{START_POINT[0], START_POINT[1]},
-                                                           {136.124324,     35.416626},
-                                                           {136.061343,     35.258477}};
-static const int TURNING_DISTANCE[] = {0, 18000, 36000, 54000, 72000, INT_MAX};
+static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{136.2463863, 35.3}, // 1要素目は必ず1kmの旋回地点にすること
+                                                           {136.18499, 35.37497},
+                                                           {136.141072, 35.2600393}};
+static const int TURNING_DISTANCE[] = {0, 10975, 21097, 31220, 42195, INT_MAX};
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
 // X座標の倍率=2.8312×(2^MapBoxの倍率)
@@ -49,19 +49,25 @@ enum [[maybe_unused]] {
     PLACE_OOTONE,
     PLACE_MAX,
 };
-// 各場所のURL（琵琶湖、富士川、大利根）※ MAPBOXからダウンロード可能
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.16,35.35,10.8,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
-// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.eyJ1IjoiMjFrbTQiLCJhIjoiY2xhdHFmM3BpMDB0NTNxcDl3b2pqN3Q1ZyJ9.8jqJf75DqkkTv5IYb8c1Pg
-static const char *IMAGE_MAP_PATH[PLACE_MAX] = {"biwako.png", "hujikawa.png", "ootone.png"};
-static const double C_LAT[PLACE_MAX] = {35.35, 35.121, 35.8594}; // 中心の緯度
-static const double C_LON[PLACE_MAX] = {136.16, 138.6315, 140.2412}; // 中心の経度
-static const double X_SCALE[PLACE_MAX] = {5000.0, 220650.0, 156500.0}; // X座標の拡大率
-static const double Y_SCALE[PLACE_MAX] = {-6200.0, -274500.0, -194000.0}; // Y座標の拡大率
+// 各場所のURL（琵琶湖、富士川、大利根）※ MAPBOXからダウンロード可能（アクセストークンは各自取得すること）
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.195,35.33,11.3,0/540x1170?access_token=pk.xxxx
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/138.6315,35.121,16.25,0/540x1170?access_token=pk.xxxx
+// https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/140.2412,35.8594,15.75,0/540x1170?access_token=pk.xxxx
+// 琵琶湖2024版：https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/136.16,35.35,10.8,0/540x1170?access_token=pk.xxxx
+static const char *IMAGE_MAP_PATH[PLACE_MAX] = {"biwako_2025.png", "hujikawa.png", "ootone.png"};
+static const double C_LAT[PLACE_MAX] = {35.33, 35.121, 35.8594}; // 中心の緯度
+static const double C_LON[PLACE_MAX] = {136.195, 138.6315, 140.2412}; // 中心の経度
+static const double X_SCALE[PLACE_MAX] = {5000.0 * 1.4142, 220650.0, 156500.0}; // X座標の拡大率
+static const double Y_SCALE[PLACE_MAX] = {-6200.0 * 1.4142, -274500.0, -194000.0}; // Y座標の拡大率
 
-static int current_place = PLACE_BIWAKO;
+enum class DIRECTION {
+    FORWARD,
+    REVERSE,
+};
+static DIRECTION direction;
+static int current_place;
+static double previous_point[2];
 static double current_point[2];
-static int cumulative_distance;
 static int turning_count;
 
 std::string JsonString_Sensor;
@@ -325,10 +331,13 @@ void get_json_data() {
     });
     microcontroller_http_thread.detach();
 
+    previous_point[0] = START_POINT[0];
+    previous_point[1] = START_POINT[1];
     current_point[0] = START_POINT[0];
     current_point[1] = START_POINT[1];
-    cumulative_distance = 0;
-    turning_count = 1;
+    direction = DIRECTION::FORWARD;
+    current_place = PLACE_BIWAKO;
+    turning_count = 0;
 
     // 1秒間に60回繰り返される
     while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0) {
@@ -422,12 +431,28 @@ void get_json_data() {
             }
 
             // 飛行距離計算
-            distance = cumulative_distance +
-                       (int) cal_distance(longitude, latitude, current_point[0], current_point[1]);
+            int from_pylon = (int)cal_distance(longitude, latitude, current_point[0], current_point[1]);
+            if (direction == DIRECTION::FORWARD) {
+                distance = TURNING_DISTANCE[turning_count] + from_pylon;
+            } else {
+                distance = TURNING_DISTANCE[turning_count + 1] - from_pylon;
+                if (distance < TURNING_DISTANCE[turning_count]) {
+                    distance = TURNING_DISTANCE[turning_count];
+                }
+
+                // 帰還位置に到達したら距離の減算を停止
+                int from_prev = (int)cal_distance(longitude, latitude, previous_point[0], previous_point[1]);
+                if (TURNING_DISTANCE[turning_count] + from_prev > TURNING_DISTANCE[turning_count + 1]) {
+                    distance = TURNING_DISTANCE[turning_count + 1];
+                }
+            }
 
             // 旋回地点まで来たら距離の計測起点を変更し、累積距離を加算
             // マイコンからdistanceの値が取れるまでは大きな値になっているので、distance値が1000km以上ときは処理を行わない
-            if (distance >= TURNING_DISTANCE[turning_count] && distance < 1000000) {
+            if (distance >= TURNING_DISTANCE[turning_count + 1] && distance < 1000000) {
+                // 旋回回数を加算
+                turning_count++;
+
                 // 各地点と現在地の距離確認
                 std::array<int, TURNING_POINT_NUM> distance_list{};
                 for (int i = 0; i < TURNING_POINT_NUM; i++) {
@@ -439,20 +464,33 @@ void get_json_data() {
                 auto it = std::min_element(distance_list.begin(), distance_list.end());
                 auto min_index = std::distance(distance_list.begin(), it);
 
-                // 起点位置を変更
-                current_point[0] = TURNING_POINT[min_index][0];
-                current_point[1] = TURNING_POINT[min_index][1];
+                // 直近旋回位置を変更
+                previous_point[0] = TURNING_POINT[min_index][0];
+                previous_point[1] = TURNING_POINT[min_index][1];
 
-                // 累積距離を加算
-                cumulative_distance +=
-                        TURNING_DISTANCE[turning_count] - TURNING_DISTANCE[turning_count - 1];
-                turning_count++;
+                // 進行方向を変更
+                if (direction == DIRECTION::FORWARD) {
+                    direction = DIRECTION::REVERSE;
+                } else {
+                    direction = DIRECTION::FORWARD;
+                }
+
+                // 起点位置を変更
+                if (turning_count <= 2) {
+                    // 基本は1kmパイロンを基準とする
+                    current_point[0] = TURNING_POINT[0][0];
+                    current_point[1] = TURNING_POINT[0][1];
+                } else {
+                    // 最終旋回後はプラットホームを基準とする
+                    current_point[0] = START_POINT[0];
+                    current_point[1] = START_POINT[1];
+                }
             }
 
             // 軌跡の描画
             for (int i = 1; i < trajectory_x.size(); i++) {
                 DrawLine(trajectory_x[i - 1], trajectory_y[i - 1], trajectory_x[i], trajectory_y[i],
-                         COLOR_RED, 10);
+                         COLOR_RED, 5);
             }
 
             // 画面にタッチされている場合（タッチパネルのタッチされている箇所の数が1以上の場合）
@@ -506,17 +544,18 @@ void get_json_data() {
                     DrawCircle(px, py, POINT_SIZE, COLOR_YELLOW_RED);
                 }
 
+                // 1, 10.975kmに扇形を描画
                 int px = (int) ((START_POINT[0] - C_LON[current_place]) * X_SCALE[current_place]);
                 int py = (int) ((START_POINT[1] - C_LAT[current_place]) * Y_SCALE[current_place]);
                 px += SCREEN_WIDTH / 2;
                 py += SCREEN_HEIGHT / 2;
-                // 5, 10, 15, 18kmに扇形を描画
-                const int DISTANCE_BORDER[4] = {5, 10, 15, 18};
-                for (int i: DISTANCE_BORDER) {
+                const float FIXED_BORDERS[2] = {1.0, 10.975};
+                for (float i: FIXED_BORDERS) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
-                    DrawCircle(px, py, (int) (i * 55), COLOR_WHITE, false, 5);
+                    DrawCircle(px, py, (int) (i * 55 * 1.4142), COLOR_WHITE, false, 5);
                     SetDrawBlendMode(DX_BLENDMODE_NOBLEND, (int) NULL);
                 }
+
                 // プラットホーム場所にプロット
                 DrawBox(px - POINT_SIZE, py - POINT_SIZE, px + POINT_SIZE, py + POINT_SIZE,
                         COLOR_YELLOW_RED, true);
