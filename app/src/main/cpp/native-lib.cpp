@@ -35,9 +35,9 @@ static const char *AUDIO_WARNING2_PATH = "warning2.wav";
 
 static const double START_POINT[2] = {136.254344, 35.294230};
 static const int TURNING_POINT_NUM = 3;
-static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{136.2463863, 35.3}, // 1要素目は必ず1kmの旋回地点にすること
-                                                           {136.18499, 35.37497},
-                                                           {136.141072, 35.2600393}};
+static const double TURNING_POINT[TURNING_POINT_NUM][2] = {{136.243910, 35.297069},  // 1要素目は必ず1kmの旋回地点にすること
+                                                           {136.174102, 35.368138},  // 竹生島側ポイント
+                                                           {136.136910, 35.274218}}; // 沖島側ポイント
 static const int TURNING_DISTANCE[] = {0, 10975, 21097, 31220, 42195, INT_MAX};
 
 // MapBoxにおける倍率は指数なので、以下の式から倍率を導出する。（パラメータは試行錯誤で出した）
