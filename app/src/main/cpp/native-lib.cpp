@@ -544,12 +544,12 @@ void get_json_data() {
                     DrawCircle(px, py, POINT_SIZE, COLOR_YELLOW_RED);
                 }
 
-                // 1, 10.975kmに扇形を描画
+                // 1.0, 6.0, 10.975kmに扇形を描画
                 int px = (int) ((START_POINT[0] - C_LON[current_place]) * X_SCALE[current_place]);
                 int py = (int) ((START_POINT[1] - C_LAT[current_place]) * Y_SCALE[current_place]);
                 px += SCREEN_WIDTH / 2;
                 py += SCREEN_HEIGHT / 2;
-                const float FIXED_BORDERS[2] = {1.0, 10.975};
+                const float FIXED_BORDERS[] = {1.0, 6.0, 10.975};
                 for (float i: FIXED_BORDERS) {
                     SetDrawBlendMode(DX_BLENDGRAPHTYPE_ALPHA, 0x40);
                     DrawCircle(px, py, (int) (i * 55 * 1.4142), COLOR_WHITE, false, 5);
